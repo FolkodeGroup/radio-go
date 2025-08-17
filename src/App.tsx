@@ -51,7 +51,7 @@ const initialPrograms: Program[] = [
 ];
 
 const initialBanners: Banner[] = [
-  { image: "https://via.placeholder.com/728x90?text=Banner+1", url: "https://ejemplo.com/1", alt: "Banner 1" },
+  { image: "https://cdn.discordapp.com/attachments/1271478849305051260/1406698409037140071/Copilot_20250817_145649.png?ex=68a3697b&is=68a217fb&hm=34c9f1da7638f8f63241343032697a8fc805bde75ebd058858a2d5b35c782f32&", url: "https://ejemplo.com/1", alt: "Banner 1" },
   { image: "https://via.placeholder.com/728x90?text=Banner+2", url: "https://ejemplo.com/2", alt: "Banner 2" },
 ];
 
@@ -105,7 +105,7 @@ function App() {
     <div className="min-h-screen bg-custom-dark">
       {showLogin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="relative w-full max-w-md flex flex-col items-center">
+          <div className="relative w-full max-w-md flex flex-col items-center bg-login">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl z-10"
               onClick={() => setShowLogin(false)}
@@ -137,12 +137,12 @@ function App() {
               target="_blank"
               rel="noopener noreferrer"
               className="block w-full mx-auto rounded-xl shadow-lg bg-slate-900/80 border border-cyan-700/30 overflow-hidden transition-all duration-500"
-              style={{ minHeight: 90, maxWidth: '100%' }}
+              style={{ minHeight: 110, maxWidth: '100%' }}
             >
               <img
                 src={banners[currentBanner].image}
                 alt={banners[currentBanner].alt}
-                className="w-full h-[90px] object-cover rounded-xl transition-all duration-500"
+                className="w-[100%] h-[110px] object-cover rounded-xl transition-all duration-500"
                 style={{ maxWidth: '100%' }}
               />
             </a>

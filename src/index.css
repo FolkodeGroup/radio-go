@@ -99,3 +99,13 @@ button:focus-visible {
 .form-login {
   box-shadow: 0 0 20px #00d4ff, 0 0 40px #0099cc;
 }
+
+.bg-login{
+  border-radius: 1rem;
+  background: linear-gradient(190deg,
+    #000000 0%,
+    #0b0b0b 70%,
+    #1a1a1a 85%,
+    #cc5500 100%
+  );
+}
