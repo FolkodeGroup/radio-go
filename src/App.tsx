@@ -3,11 +3,13 @@ import Header from "./components/Header";
 import ModernPlayer from "./components/ModernPlayer";
 import Footer from "./components/Footer";
 import logo from "./assets/logo-radio.jpg";
+import Login from "./components/Login";
 import "./styles.css";
 
 function App() {
   return (
     <div className="min-h-screen bg-custom-dark">
+      <Login />
       <Header />
       {/* Hero Section */}
       <section id="inicio" className="min-h-screen flex flex-col justify-center items-center px-6 pt-20 bg-custom-dark">
@@ -141,7 +143,7 @@ function App() {
         </div>
       </section>
       <div className="bg-custom-dark">
-        
+
         <Footer />
       </div>
     </div>
