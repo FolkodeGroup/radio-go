@@ -58,8 +58,10 @@ const Player: React.FC = () => {
         audioRef.current.pause();
         setPlaying(false);
       } else {
-        // Para streams Icecast, necesitamos recargar la fuente cada vez
-        audioRef.current.load();
+        // Para streams Icecast, evitar múltiples cargas simultáneas
+        if (audioRef.current.readyState === 0) {
+          audioRef.current.load();
+        }
         await audioRef.current.play();
         setPlaying(true);
         setError(null);
@@ -89,12 +91,9 @@ const Player: React.FC = () => {
       <audio 
         ref={audioRef} 
         preload="none" 
-        crossOrigin="anonymous"
         controls={false}
       >
         <source src={STREAM_URL} type="audio/mpeg" />
-        <source src={STREAM_URL} type="audio/ogg" />
-        <source src={STREAM_URL} type="audio/aac" />
         Tu navegador no soporta el elemento audio.
       </audio>
       
