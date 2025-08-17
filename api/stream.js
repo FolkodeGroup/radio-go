@@ -1,78 +1,42 @@
-export default async function handler(req, res) {
-  // Configurar headers CORS para todas las requests
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-  
-  // Si es OPTIONS (preflight), responder inmediatamente
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+// /api/stream.mjs
+
+export const config = {
+  runtime: 'edge', // Usamos el runtime de Vercel Edge para mejor rendimiento de streaming
+};
+
+export default async function handler(request) {
+  // URL del servidor de streaming real.
+  // El "/" al final es importante para Icecast.
+  const STREAM_URL = 'http://138.199.234.123:8025/';
 
   try {
-    const streamUrl = 'https://cast4.prosandoval.com/public/radio_go';
-    
-    console.log('Proxying stream from:', streamUrl);
-    
-    // Fetch del stream original con headers apropiados para streaming
-    const response = await fetch(streamUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Radio-Go-Player/1.0',
-        'Accept': 'audio/*',
-        'Range': req.headers.range || 'bytes=0-',
-      },
-    });
-    
+    // Hacemos la petición desde el servidor de Vercel al servidor de streaming.
+    const response = await fetch(STREAM_URL);
+
+    // Si el servidor de streaming no responde correctamente, devolvemos un error.
     if (!response.ok) {
-      console.error(`HTTP error! status: ${response.status}`);
-      throw new Error(`HTTP error! status: ${response.status}`);
+      return new Response('El servidor de streaming no está disponible.', { status: 502 });
     }
 
-    // Configurar headers de respuesta para streaming
-    res.setHeader('Content-Type', response.headers.get('Content-Type') || 'audio/mpeg');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    // Clonamos las cabeceras (headers) de la respuesta original.
+    const headers = new Headers(response.headers);
     
-    // Copiar otros headers importantes si existen
-    if (response.headers.get('Content-Length')) {
-      res.setHeader('Content-Length', response.headers.get('Content-Length'));
-    }
-    if (response.headers.get('Accept-Ranges')) {
-      res.setHeader('Accept-Ranges', response.headers.get('Accept-Ranges'));
-    }
-    
-    // Para Node.js en Vercel, usar response.body directamente
-    if (response.body) {
-      const reader = response.body.getReader();
-      
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          if (!res.destroyed) {
-            res.write(Buffer.from(value));
-          } else {
-            break;
-          }
-        }
-      } catch (streamError) {
-        console.error('Error during streaming:', streamError);
-      } finally {
-        reader.releaseLock();
-      }
-    }
-    
-    res.end();
-    
-  } catch (error) {
-    console.error('Error proxying stream:', error);
-    res.status(500).json({ 
-      error: 'Error accessing stream',
-      details: error.message 
+    // Establecemos cabeceras para asegurar que el navegador lo trate como un stream en vivo.
+    headers.set('Content-Type', 'audio/mpeg');
+    headers.set('Cache-Control', 'no-cache, no-store');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Connection', 'keep-alive');
+    headers.set('Accept-Ranges', 'none');
+
+    // Creamos una nueva respuesta con el cuerpo del stream (response.body)
+    // y las cabeceras que hemos preparado.
+    return new Response(response.body, {
+      status: 200,
+      headers: headers,
     });
+
+  } catch (error) {
+    console.error('Error en el proxy de streaming:', error);
+    return new Response('Error al conectar con el servidor de streaming.', { status: 500 });
   }
 }
