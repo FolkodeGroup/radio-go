@@ -56,48 +56,36 @@ const Player: React.FC = () => {
     try {
       if (playing) {
         audioRef.current.pause();
+        audioRef.current.currentTime = 0;
         setPlaying(false);
       } else {
         console.log('Attempting to play stream:', STREAM_URL);
         
-        // Evitar múltiples cargas si ya está cargando
-        if (audioRef.current.readyState < 2) {
-          console.log('Loading audio source...');
-          audioRef.current.load();
-          
-          // Esperar a que esté listo para reproducir
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Timeout loading audio')), 10000);
-            
-            const onCanPlay = () => {
-              clearTimeout(timeout);
-              audioRef.current?.removeEventListener('canplay', onCanPlay);
-              audioRef.current?.removeEventListener('error', onError);
-              resolve(true);
-            };
-            
-            const onError = (e: Event) => {
-              clearTimeout(timeout);
-              audioRef.current?.removeEventListener('canplay', onCanPlay);
-              audioRef.current?.removeEventListener('error', onError);
-              reject(e);
-            };
-            
-            audioRef.current?.addEventListener('canplay', onCanPlay);
-            audioRef.current?.addEventListener('error', onError);
-          });
+        // Para streams Icecast, crear una nueva instancia cada vez
+        if (audioRef.current.src !== STREAM_URL) {
+          audioRef.current.src = STREAM_URL;
         }
         
-        console.log('Playing audio...');
-        await audioRef.current.play();
-        setPlaying(true);
-        setError(null);
-        console.log('Audio playing successfully');
+        // Configurar eventos antes de cargar
+        const playPromise = audioRef.current.play();
+        
+        if (playPromise !== undefined) {
+          await playPromise;
+          setPlaying(true);
+          setError(null);
+          console.log('Audio playing successfully');
+        }
       }
     } catch (err) {
       console.error('Error playing audio:', err);
       const errorMessage = err instanceof Error ? err.message : 'No se pudo reproducir el stream';
-      setError(`Error: ${errorMessage}`);
+      
+      // Si hay error CORS, sugerir usar proxy
+      if (errorMessage.includes('CORS') || errorMessage.includes('cross-origin')) {
+        setError('Error CORS: Configura /api/stream como URL');
+      } else {
+        setError(`Error: ${errorMessage}`);
+      }
       setPlaying(false);
     }
   };
