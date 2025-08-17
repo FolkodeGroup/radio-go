@@ -1,9 +1,9 @@
-// /api/stream.mjs o /api/stream.js
+// /api/stream.mjs
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-  // URL CORRECTA del stream, según el panel de Azuracast.
-  const STREAM_URL = 'http://138.199.234.123:8020/stream';
+  // LA URL PÚBLICA Y CORRECTA DEL STREAM DE AZURACAST
+  const STREAM_URL = 'https://cast4.prosandoval.com/listen/radio_go/radio.mp3';
 
   try {
     const proxyRes = await fetch(STREAM_URL, {
@@ -14,17 +14,15 @@ export default async function handler(req, res) {
     });
 
     if (!proxyRes.ok) {
+      console.error(`Error from stream server: ${proxyRes.status}`);
       return res.status(proxyRes.status).send(proxyRes.statusText);
     }
 
-    // Pasamos las cabeceras originales del stream al cliente (navegador).
     res.writeHead(proxyRes.status, Object.fromEntries(proxyRes.headers.entries()));
-
-    // Conectamos directamente la respuesta del stream a la respuesta del cliente.
     proxyRes.body.pipe(res);
 
   } catch (error) {
-    console.error('Error en el proxy de streaming:', error);
-    res.status(500).send('Error al conectar con el servidor de streaming.');
+    console.error('Error in streaming proxy:', error);
+    res.status(500).send('Error connecting to the streaming server.');
   }
 }
