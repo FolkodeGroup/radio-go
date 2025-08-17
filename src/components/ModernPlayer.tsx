@@ -58,17 +58,46 @@ const Player: React.FC = () => {
         audioRef.current.pause();
         setPlaying(false);
       } else {
-        // Para streams Icecast, evitar múltiples cargas simultáneas
-        if (audioRef.current.readyState === 0) {
+        console.log('Attempting to play stream:', STREAM_URL);
+        
+        // Evitar múltiples cargas si ya está cargando
+        if (audioRef.current.readyState < 2) {
+          console.log('Loading audio source...');
           audioRef.current.load();
+          
+          // Esperar a que esté listo para reproducir
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Timeout loading audio')), 10000);
+            
+            const onCanPlay = () => {
+              clearTimeout(timeout);
+              audioRef.current?.removeEventListener('canplay', onCanPlay);
+              audioRef.current?.removeEventListener('error', onError);
+              resolve(true);
+            };
+            
+            const onError = (e: Event) => {
+              clearTimeout(timeout);
+              audioRef.current?.removeEventListener('canplay', onCanPlay);
+              audioRef.current?.removeEventListener('error', onError);
+              reject(e);
+            };
+            
+            audioRef.current?.addEventListener('canplay', onCanPlay);
+            audioRef.current?.addEventListener('error', onError);
+          });
         }
+        
+        console.log('Playing audio...');
         await audioRef.current.play();
         setPlaying(true);
         setError(null);
+        console.log('Audio playing successfully');
       }
     } catch (err) {
       console.error('Error playing audio:', err);
-      setError('No se pudo reproducir el stream');
+      const errorMessage = err instanceof Error ? err.message : 'No se pudo reproducir el stream';
+      setError(`Error: ${errorMessage}`);
       setPlaying(false);
     }
   };
