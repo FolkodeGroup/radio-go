@@ -7,7 +7,7 @@ export const config = {
 export default async function handler(request) {
   // URL del servidor de streaming real.
   // El "/" al final es importante para Icecast.
-  const STREAM_URL = 'http://138.199.234.123:8025/';
+  const STREAM_URL = 'http://138.199.234.123:8020/stream';
 
   try {
     // Hacemos la petición desde el servidor de Vercel al servidor de streaming.
