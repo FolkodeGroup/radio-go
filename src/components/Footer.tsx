@@ -101,11 +101,11 @@ const Footer: React.FC = () => (
         viewport={{ once: true }}
       >
         <div className="flex items-center justify-center gap-2">
-                    <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 text-sm">
             © 2025 Radio Go. Todos los derechos reservados. | Diseñado por Folkoder
           </p>
           <img
-            src="/src/assets/favicon-16x16.png"
+            src="/favicon-16x16.png"
             alt="Folkoder Logo"
             className="h-6 w-6"
           />
