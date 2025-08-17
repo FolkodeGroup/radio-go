@@ -10,6 +10,7 @@ const Player: React.FC = () => {
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [currentTime, setCurrentTime] = useState("00:00");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -19,14 +20,74 @@ const Player: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (playing) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
+  useEffect(() => {
+    if (audioRef.current) {
+      const audio = audioRef.current;
+      
+      const handleError = (e: Event) => {
+        console.error('Audio error:', e);
+        setError('Error al cargar el stream');
+        setPlaying(false);
+      };
+
+      const handleCanPlay = () => {
+        setError(null);
+      };
+
+      const handleLoadStart = () => {
+        setError(null);
+      };
+
+      audio.addEventListener('error', handleError);
+      audio.addEventListener('canplay', handleCanPlay);
+      audio.addEventListener('loadstart', handleLoadStart);
+
+      return () => {
+        audio.removeEventListener('error', handleError);
+        audio.removeEventListener('canplay', handleCanPlay);
+        audio.removeEventListener('loadstart', handleLoadStart);
+      };
     }
-    setPlaying(!playing);
+  }, []);
+
+  const togglePlay = async () => {
+    if (!audioRef.current) return;
+    
+    try {
+      if (playing) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        setPlaying(false);
+      } else {
+        console.log('Attempting to play stream:', STREAM_URL);
+        
+        // Para streams Icecast, crear una nueva instancia cada vez
+        if (audioRef.current.src !== STREAM_URL) {
+          audioRef.current.src = STREAM_URL;
+        }
+        
+        // Configurar eventos antes de cargar
+        const playPromise = audioRef.current.play();
+        
+        if (playPromise !== undefined) {
+          await playPromise;
+          setPlaying(true);
+          setError(null);
+          console.log('Audio playing successfully');
+        }
+      }
+    } catch (err) {
+      console.error('Error playing audio:', err);
+      const errorMessage = err instanceof Error ? err.message : 'No se pudo reproducir el stream';
+      
+      // Si hay error CORS, sugerir usar proxy
+      if (errorMessage.includes('CORS') || errorMessage.includes('cross-origin')) {
+        setError('Error CORS: Configura /api/stream como URL');
+      } else {
+        setError(`Error: ${errorMessage}`);
+      }
+      setPlaying(false);
+    }
   };
 
   const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +105,14 @@ const Player: React.FC = () => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 1 }}
     >
-      <audio ref={audioRef} src={STREAM_URL} preload="none" />
+      <audio 
+        ref={audioRef} 
+        preload="none" 
+        controls={false}
+      >
+        <source src={STREAM_URL} type="audio/mpeg" />
+        Tu navegador no soporta el elemento audio.
+      </audio>
       
       {/* Pantalla Principal */}
       <div className="bg-black rounded-xl p-6 mb-6 relative overflow-hidden">
@@ -58,7 +126,9 @@ const Player: React.FC = () => {
           </div>
           <div className="text-center">
             <h3 className="text-white text-lg font-bold orbitron">RADIO GO</h3>
-            <p className="text-cyan-300 text-sm">En Vivo - {playing ? "Transmitiendo" : "Detenido"}</p>
+            <p className="text-cyan-300 text-sm">
+              {error ? error : `En Vivo - ${playing ? "Transmitiendo" : "Detenido"}`}
+            </p>
           </div>
         </div>
         

@@ -102,11 +102,11 @@ const Footer: React.FC = () => (
       >
         <div className="flex items-center justify-center gap-2">
           <p className="text-slate-400 text-sm">
-            © 2025 Radio Go. Todos los derechos reservados. | Diseñado por <a href="https://folkode.vercel.app/" target="_blank" rel="noopener noreferrer">Folkode</a>
+            © 2025 Radio Go. Todos los derechos reservados. | Diseñado por Folkoder
           </p>
           <img
-            src="/src/assets/android-chrome-512x512.png"
-            alt="Folkode Logo"
+            src="/favicon-16x16.png"
+            alt="Folkoder Logo"
             className="h-6 w-6"
           />
         </div>
