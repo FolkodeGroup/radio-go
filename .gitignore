@@ -7,20 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Node.js
-node_modules/
-
-# Build output
-dist/
-dist-ssr/
-
-# Vite
-.vite/
-
-# Environment variables
-.env
-.env.local
-.env.*.local
+node_modules
+dist
+dist-ssr
+*.local
 
 # Editor directories and files
 .vscode/*
@@ -32,12 +22,3 @@ dist-ssr/
 *.njsproj
 *.sln
 *.sw?
-
-# TailwindCSS
-*.css.map
-
-# Misc
-*.lock
-*.cache
-*~
-Thumbs.db

@@ -1,66 +1,69 @@
-# Demo Radio Go
+# React + TypeScript + Vite
 
-Demo Radio Go es una landing page SPA para una radio online, diseñada con tecnologías modernas como React, TypeScript, TailwindCSS y Framer Motion. Este proyecto incluye un reproductor de audio futurista y personalizable, listo para recibir la URL del streaming como variable de entorno.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Tecnologías Utilizadas
+Currently, two official plugins are available:
 
-- **React**: Para la construcción de la interfaz de usuario.
-- **TypeScript**: Para garantizar la seguridad de tipos en el desarrollo.
-- **TailwindCSS**: Para estilos rápidos y personalizados.
-- **Framer Motion**: Para animaciones fluidas y modernas.
-- **Vite**: Para un entorno de desarrollo rápido y eficiente.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Características
+## Expanding the ESLint configuration
 
-- **Reproductor de Audio Moderno**: Con controles de reproducción, volumen y visualización de ecualizador animado.
-- **Diseño Responsivo**: Adaptado para dispositivos móviles y de escritorio.
-- **Integración de Streaming**: Configurable mediante la variable de entorno `VITE_STREAM_URL`.
-- **Estilo Futurista**: Uso de gradientes, sombras y animaciones para una experiencia visual única.
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-## Configuración del Proyecto
+```js
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-1. Clona este repositorio:
-   ```bash
-   git clone <URL_DEL_REPOSITORIO>
-   ```
+      // Remove tseslint.configs.recommended and replace with this
+      ...tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      ...tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      ...tseslint.configs.stylisticTypeChecked,
 
-2. Instala las dependencias:
-   ```bash
-   npm install
-   ```
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
 
-3. Configura la URL del streaming en un archivo `.env`:
-   ```env
-   VITE_STREAM_URL=https://tu-url-de-streaming.com
-   ```
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-4. Inicia el servidor de desarrollo:
-   ```bash
-   npm run dev
-   ```
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-5. Abre el proyecto en tu navegador en `http://localhost:3000`.
-
-## Despliegue
-
-Este proyecto está optimizado para ser desplegado en [Vercel](https://vercel.com/):
-
-1. Conecta tu repositorio a Vercel.
-2. Configura la variable de entorno `VITE_STREAM_URL` en el panel de configuración de Vercel.
-3. Despliega automáticamente al hacer push a la rama principal.
-
-## Capturas de Pantalla
-
-*(Incluye capturas de pantalla del diseño y el reproductor aquí)*
-
-## Contribuciones
-
-¡Las contribuciones son bienvenidas! Si deseas colaborar, por favor abre un issue o envía un pull request.
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
-
----
-
-Desarrollado con ❤️ por FolKode Group.
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
