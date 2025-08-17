@@ -2,7 +2,12 @@ import React from "react";
 import { motion } from "framer-motion";
 
 
-const Footer: React.FC = () => (
+type FooterProps = {
+  onAdminLoginClick?: () => void;
+  isAdmin?: boolean;
+};
+
+const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
   <footer className="bg-slate-900/90 backdrop-blur-lg py-12 mt-20">
     <div className="container mx-auto px-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
@@ -100,7 +105,7 @@ const Footer: React.FC = () => (
         transition={{ duration: 0.8, delay: 0.6 }}
         viewport={{ once: true }}
       >
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-2">
           <p className="text-slate-400 text-sm">
             © 2025 Radio Go. Todos los derechos reservados. | Diseñado por Folkoder
           </p>
@@ -109,6 +114,12 @@ const Footer: React.FC = () => (
             alt="Folkoder Logo"
             className="h-6 w-6"
           />
+          <button
+            className="ml-4 mt-2 md:mt-0 text-xs text-cyan-400 underline hover:text-orange-400 transition"
+            onClick={onAdminLoginClick}
+          >
+            {isAdmin ? 'Panel administrador' : 'Login administrador'}
+          </button>
         </div>
       </motion.div>
     </div>
