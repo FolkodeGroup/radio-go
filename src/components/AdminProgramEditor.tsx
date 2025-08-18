@@ -89,6 +89,7 @@ export default function AdminProgramEditor() {
         image_url: editProgram.image_url,
         description: editProgram.description,
         host: editProgram.host,
+        live: editProgram.live, // Agregar este campo
       }).eq('name', oldProgram.title).eq('description', oldProgram.description);
       if (!error) {
         await fetchProgramsFromDB();
@@ -121,6 +122,7 @@ export default function AdminProgramEditor() {
       image_url: newProgram.image_url,
       description: newProgram.description,
       host: newProgram.host,
+      live: newProgram.live, // Agregar este campo
     });
     if (!error) {
       await fetchProgramsFromDB();
