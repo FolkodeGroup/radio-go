@@ -19,7 +19,7 @@ const METADATA_URL = "https://cast4.prosandovaal.com/public/radio_go/nowplaying.
 const Player: React.FC<PlayerProps> = ({ currentLive }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.8);
+  const [volume, setVolume] = useState(0.4);
   const [currentTime, setCurrentTime] = useState("00:00");
   const [error, setError] = useState<string | null>(null);
   const [song, setSong] = useState<{ title: string; artist: string; cover: string | null }>({ title: '', artist: '', cover: null });
