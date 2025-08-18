@@ -1,16 +1,249 @@
+import { useState, useEffect, useRef, type Dispatch, type SetStateAction, type ComponentType } from "react";
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "./supabaseClient";
 import { motion } from "framer-motion";
 import Header from "./components/Header";
 import ModernPlayer from "./components/ModernPlayer";
 import Footer from "./components/Footer";
 import logo from "./assets/logo-radio.jpg";
+import Login from "./components/Login";
+import AdminPanel from "./components/AdminPanel";
+import { FaFacebook, FaTiktok, FaInstagram, FaTwitch} from "react-icons/fa";
+import { SiTunein } from 'react-icons/si';
 import "./styles.css";
 
+
+
+
+// Banner type
+type Program = {
+  title: string;
+  time: string;
+  live: boolean;
+  description: string;
+  host: string;
+};
+
+type Banner = {
+  image: string;
+  url: string;
+  alt: string;
+};
+
+
 function App() {
+  const [showLogin, setShowLogin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  // Consultar datos reales de Supabase
+  useEffect(() => {
+    const fetchData = async () => {
+      // Banners
+      const { data: bannersData, error: bannersError } = await supabase
+        .from('banners')
+        .select('image_url, link_url, title, active');
+      if (!bannersError && bannersData) {
+        setBanners(
+          bannersData
+            .filter((b): b is { image_url: string; link_url: string; title: string; active: boolean } => !!b && b.active)
+            .map((b) => ({
+              image: b.image_url,
+              url: b.link_url,
+              alt: b.title || '',
+            }))
+        );
+      }
+      // Programs
+      const { data: programsData, error: programsError } = await supabase
+        .from('programs')
+        .select('name, start_time, end_time, description, host, day_of_week, id')
+        .order('start_time', { ascending: true });
+      if (!programsError && programsData) {
+        setPrograms(
+          programsData.map((p: {
+            name: string;
+            start_time: string;
+            end_time: string;
+            description: string;
+            host: string;
+            day_of_week: number;
+            id: string;
+          }) => ({
+            title: p.name,
+            time: `${p.start_time || ''} - ${p.end_time || ''}`,
+            live: false, // Puedes ajustar esto según tu lógica
+            description: p.description || '',
+            host: p.host || '',
+          }))
+        );
+      }
+    };
+    fetchData();
+  }, []);
+  const [currentBanner, setCurrentBanner] = useState(0);
+  const bannerInterval = useRef<number | null>(null);
+
+
+  // Slider automático
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    if (bannerInterval.current) clearInterval(bannerInterval.current);
+    bannerInterval.current = window.setInterval(() => {
+      setCurrentBanner((prev) => (prev + 1) % banners.length);
+    }, 5000); // 5 segundos
+    return () => {
+      if (bannerInterval.current) clearInterval(bannerInterval.current);
+    };
+  }, [banners.length]);
+
+  // Cambio manual
+  const goToBanner = (idx: number) => {
+    setCurrentBanner(idx);
+    if (bannerInterval.current) {
+      clearInterval(bannerInterval.current);
+      bannerInterval.current = window.setInterval(() => {
+        setCurrentBanner((prev) => (prev + 1) % banners.length);
+      }, 5000);
+    }
+  };
+
+  const handleLoginSuccess = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    setUser(user);
+    setIsAdmin(true);
+    setShowLogin(false);
+  };
+
+  // Mantener sesión sincronizada con Supabase
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setIsAdmin(!!user);
+    };
+    getSession();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsAdmin(!!session?.user);
+    });
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (isAdmin) {
+    type AdminPanelProps = {
+      banners: Banner[];
+      setBanners: Dispatch<SetStateAction<Banner[]>>;
+      programs: Program[];
+      setPrograms: Dispatch<SetStateAction<Program[]>>;
+    };
+    const AdminPanelComponent = AdminPanel as unknown as ComponentType<AdminPanelProps>;
+    return (
+      <div>
+        <div className="flex justify-end items-center p-4 bg-gray-900 text-white text-sm">
+          {user && (
+            <span className="mr-4">Logueado como: <span className="font-bold text-custom-teal">{user.email}</span></span>
+          )}
+          <button
+            className="bg-custom-orange text-white px-3 py-1 rounded hover:bg-custom-teal transition"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              setIsAdmin(false);
+              setUser(null);
+            }}
+          >
+            Cerrar sesión
+          </button>
+        </div>
+        <AdminPanelComponent
+          banners={banners}
+          setBanners={setBanners}
+          programs={programs}
+          setPrograms={setPrograms}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-custom-dark">
+      {showLogin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="relative w-full max-w-md flex flex-col items-center bg-login">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl z-10"
+              onClick={() => setShowLogin(false)}
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+            <Login onLoginSuccess={handleLoginSuccess} />
+          </div>
+        </div>
+      )}
       <Header />
+      {/* Banner Slider Section */}
+      <section className="w-full flex justify-center items-center py-6 bg-gradient-to-r from-cyan-900/40 to-blue-900/40 select-none">
+        <div className="w-full relative flex items-center justify-center px-0">
+          {/* Flecha izquierda */}
+          <button
+            className="absolute left-4 z-10 bg-slate-900/70 hover:bg-cyan-700/80 text-white rounded-full p-2 shadow-lg transition-all top-1/2 -translate-y-1/2"
+            onClick={() => goToBanner((currentBanner - 1 + banners.length) % banners.length)}
+            aria-label="Anterior"
+            style={{ display: banners.length > 1 ? 'block' : 'none' }}
+          >
+            <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          {/* Banner actual */}
+          {banners.length > 0 ? (
+            <a
+              href={banners[currentBanner]?.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full mx-auto rounded-xl shadow-lg bg-slate-900/80 border border-cyan-700/30 overflow-hidden transition-all duration-500"
+              style={{ minHeight: 270, maxWidth: '100%' }}
+            >
+              <img
+                src={banners[currentBanner].image}
+                alt={banners[currentBanner].alt}
+                className="w-[100%] h-[270px] object-cover rounded-xl transition-all duration-500"
+                style={{ maxWidth: '100%' }}
+              />
+            </a>
+          ) : (
+            <div className="w-full h-[90px] flex items-center justify-center text-slate-400 bg-slate-900/60 rounded-xl border border-cyan-700/20">
+              Sin banners
+            </div>
+          )}
+          {/* Flecha derecha */}
+          <button
+            className="absolute right-4 z-10 bg-slate-900/70 hover:bg-cyan-700/80 text-white rounded-full p-2 shadow-lg transition-all top-1/2 -translate-y-1/2"
+            onClick={() => goToBanner((currentBanner + 1) % banners.length)}
+            aria-label="Siguiente"
+            style={{ display: banners.length > 1 ? 'block' : 'none' }}
+          >
+            <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+          {/* Indicadores */}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+            {banners.map((_, idx) => (
+              <button
+                key={idx}
+                className={`w-3 h-3 rounded-full border-2 ${idx === currentBanner ? 'bg-custom-orange border-custom-orange' : 'bg-slate-700 border-slate-400'} transition-all`}
+                onClick={() => goToBanner(idx)}
+                aria-label={`Ir al banner ${idx + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
       {/* Hero Section */}
-      <section id="inicio" className="min-h-screen flex flex-col justify-center items-center px-6 pt-20 bg-custom-dark">
+      <section id="inicio" className="min-h-screen flex flex-col justify-center items-center px-6 pt-10 bg-custom-dark">
         <div className="container mx-auto text-center">
           <motion.div
             className="mb-8"
@@ -47,38 +280,45 @@ function App() {
             La mejor música y entretenimiento las 24 horas del día
           </motion.p>
           <motion.div
-            className="mb-16"
+            className="mb-8"
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.8 }}
           >
             <ModernPlayer />
           </motion.div>
-          {/* Stats */}
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 0.8 }}
-          >
-            {[
-              { number: "24/7", label: "En el aire" },
-              { number: "91.6", label: "FM MHz" },
-              { number: "∞", label: "Buena música" }
-            ].map((stat, index) => (
-              <motion.div
-                key={index}
-                className="glass rounded-lg p-6 border-l-4 border-custom-orange"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="text-3xl font-bold text-custom-teal orbitron mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-white font-medium">
-                  {stat.label}
-                </div>
-              </motion.div>
-            ))}
+          {/* Redes sociales */}
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <span> Escuchanos en </span>{" "}
+              <span className="text-custom-orange">Nuestras </span>{" "}
+              <span className="text-custom-teal">Redes</span>
+            </h2>
+            <div className="w-24 h-1 bg-custom-teal mx-auto mb-8"></div>
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-5 gap-8 max-w-3xl mx-auto card-login"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.8 }}
+            >
+              {[
+                { icon: FaFacebook, url: "https://facebook.com", color: "text-blue-500" },
+                { icon: FaTiktok, url: "https://tiktok.com", color: "text-white" },
+                { icon: FaInstagram, url: "https://instagram.com", color: "text-pink-500" },
+                { icon: FaTwitch, url: "https://twitch.tv", color: "text-purple-500" },
+                { icon: SiTunein, url: "https://tunein.com/radio/Radio-Go-s346452", color: "text-white" },
+              ].map((social, index) => (
+                <motion.a
+                  key={index}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.1 }}
+                  className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+                >
+                  <social.icon size={35} className={`text-2xl ${social.color}`} />
+                  <span className={`font-semibold ${social.color}`}></span>
+                </motion.a>
+              ))}
           </motion.div>
         </div>
       </section>
@@ -107,42 +347,25 @@ function App() {
           </h2>
           <div className="w-24 h-1 bg-custom-orange mx-auto mb-12"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-custom-dark rounded-lg p-6 transform hover:-translate-y-2 transition duration-300 shadow-lg border-l-4 border-custom-orange relative overflow-hidden group">
-              <p className="font-bold text-custom-orange mb-2">08:00 - 10:00</p>
-              <h3 className="text-xl font-semibold text-white mb-2">
-                Despierta con Go
-              </h3>
-              <p className="text-gray-400">
-                La mejor energía y los hits del momento para empezar tu día con
-                todo.
-              </p>
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-            </div>
-            <div className="bg-custom-dark rounded-lg p-6 transform hover:-translate-y-2 transition duration-300 shadow-lg border-l-4 border-custom-teal relative overflow-hidden group">
-              <p className="font-bold text-custom-teal mb-2">14:00 - 16:00</p>
-              <h3 className="text-xl font-semibold text-white mb-2">
-                Tarde de Clásicos
-              </h3>
-              <p className="text-gray-400">
-                Un viaje en el tiempo con las canciones que marcaron época.
-              </p>
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-            </div>
-            <div className="bg-custom-dark rounded-lg p-6 transform hover:-translate-y-2 transition duration-300 shadow-lg border-l-4 border-custom-orange relative overflow-hidden group">
-              <p className="font-bold text-custom-orange mb-2">20:00 - 22:00</p>
-              <h3 className="text-xl font-semibold text-white mb-2">Go Nights</h3>
-              <p className="text-gray-400">
-                La selección perfecta de música electrónica para acompañar tu
-                noche.
-              </p>
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-            </div>
+            {programs.length > 0 ? programs.map((p, idx) => (
+              <div
+                key={idx}
+                className={`bg-custom-dark rounded-lg p-6 transform hover:-translate-y-2 transition duration-300 shadow-lg border-l-4 ${p.live ? 'border-custom-orange' : 'border-custom-teal'} relative overflow-hidden group`}
+              >
+                <p className={`font-bold ${p.live ? 'text-custom-orange' : 'text-custom-teal'} mb-2`}>{p.time}</p>
+                <h3 className="text-xl font-semibold text-white mb-2">{p.title}</h3>
+                <p className="text-gray-400 mb-1">{p.description}</p>
+                <p className="text-xs text-slate-400">{p.host}</p>
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
+              </div>
+            )) : (
+              <div className="col-span-3 text-center text-slate-400 py-8">No hay programas cargados.</div>
+            )}
           </div>
         </div>
       </section>
       <div className="bg-custom-dark">
-        
-        <Footer />
+        <Footer onAdminLoginClick={() => setShowLogin(true)} isAdmin={isAdmin} />
       </div>
     </div>
   );
