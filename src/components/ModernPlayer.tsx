@@ -14,12 +14,37 @@ type PlayerProps = {
   } | null;
 };
 
+const METADATA_URL = "https://cast4.prosandovaal.com/public/radio_go/nowplaying.json";
+
 const Player: React.FC<PlayerProps> = ({ currentLive }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [currentTime, setCurrentTime] = useState("00:00");
   const [error, setError] = useState<string | null>(null);
+  const [song, setSong] = useState<{ title: string; artist: string; cover: string | null }>({ title: '', artist: '', cover: null });
+  // Fetch metadatos de la canción actual
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const res = await fetch(METADATA_URL);
+        if (!res.ok) return;
+        const data = await res.json();
+        // Estructura estándar AzuraCast/Icecast
+        const np = data.now_playing || data;
+        setSong({
+          title: np.song?.title || np.title || '',
+          artist: np.song?.artist || np.artist || '',
+          cover: np.song?.art || np.art || null
+        });
+      } catch {
+        // No actualizar si hay error
+      }
+    };
+    fetchMetadata();
+    const interval = window.setInterval(fetchMetadata, 8000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -133,7 +158,20 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
             <span className="text-cyan-400 text-sm font-mono">FM 91.6</span>
             <span className="text-cyan-400 text-sm font-mono">{currentTime}</span>
           </div>
-          <div className="text-center">
+          <div className="flex items-center justify-center gap-4 mb-2">
+            {song.cover ? (
+              <img src={song.cover} alt="cover" className="w-14 h-14 rounded shadow border-2 border-custom-orange bg-slate-900 object-cover" />
+            ) : (
+              <div className="w-14 h-14 flex items-center justify-center rounded bg-slate-800 border-2 border-custom-orange">
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path fill="#F97316" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+              </div>
+            )}
+            <div className="text-left">
+              <div className="text-white text-base font-bold leading-tight truncate max-w-[180px]">{song.title || 'Sin información'}</div>
+              <div className="text-cyan-300 text-xs truncate max-w-[180px]">{song.artist || ''}</div>
+            </div>
+          </div>
+          <div className="text-center mt-2">
             <h3 className="text-white text-lg font-bold orbitron">RADIO GO</h3>
             {currentLive ? (
               <>
