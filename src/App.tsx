@@ -58,6 +58,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [currentLive, setCurrentLive] = useState<Program | null>(null);
   // Estado de carga global
   const [loading, setLoading] = useState(true);
   // Consultar datos reales de Supabase
@@ -85,23 +86,43 @@ function App() {
         .select('name, start_time, end_time, description, host, day_of_week, id')
         .order('start_time', { ascending: true });
       if (isMounted && !programsError && programsData) {
-        setPrograms(
-          programsData.map((p: {
-            name: string;
-            start_time: string;
-            end_time: string;
-            description: string;
-            host: string;
-            day_of_week: number;
-            id: string;
-          }) => ({
+        // Detectar programa en vivo
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const nowStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const day = now.getDay();
+        let liveFound = null;
+        const mapped = programsData.map((p: {
+          name: string;
+          start_time: string;
+          end_time: string;
+          description: string;
+          host: string;
+          day_of_week: number;
+          id: string;
+        }) => {
+          // Asume formato HH:mm o HH:mm:ss
+          const start = (p.start_time || '').slice(0,5);
+          const end = (p.end_time || '').slice(0,5);
+          const isToday = p.day_of_week === day;
+          const isLive = isToday && nowStr >= start && nowStr < end;
+          if (isLive) liveFound = {
             title: p.name,
             time: `${p.start_time || ''} - ${p.end_time || ''}`,
-            live: false, // Puedes ajustar esto según tu lógica
+            live: true,
             description: p.description || '',
             host: p.host || '',
-          }))
-        );
+          };
+          return {
+            title: p.name,
+            time: `${p.start_time || ''} - ${p.end_time || ''}`,
+            live: isLive,
+            description: p.description || '',
+            host: p.host || '',
+          };
+        });
+        setPrograms(mapped);
+        setCurrentLive(liveFound);
       }
       // Oculta loader tras ambos fetch
       setTimeout(() => { if (isMounted) setLoading(false); }, 200); // delay mínimo para evitar parpadeo
@@ -314,7 +335,7 @@ function App() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.8 }}
           >
-            <ModernPlayer />
+            <ModernPlayer currentLive={currentLive} />
           </motion.div>
           {/* Redes sociales */}
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -381,9 +402,12 @@ function App() {
               return (
                 <div
                   key={idx}
-                  className={`bg-custom-dark rounded-lg p-6 transform hover:-translate-y-2 transition duration-300 shadow-lg border-l-4 ${isTurquoise ? 'border-custom-teal' : 'border-custom-orange'} relative overflow-hidden group`}
+                  className={`bg-custom-dark rounded-lg p-6 transform hover:-translate-y-2 transition duration-300 shadow-lg border-l-4 ${p.live ? 'border-custom-orange' : isTurquoise ? 'border-custom-teal' : 'border-custom-orange'} relative overflow-hidden group`}
                 >
-                  <p className={`font-bold ${isTurquoise ? 'text-custom-teal' : 'text-custom-orange'} mb-2`}>{p.time}</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className={`font-bold ${p.live ? 'text-custom-orange animate-pulse' : isTurquoise ? 'text-custom-teal' : 'text-custom-orange'}`}>{p.time}</p>
+                    {p.live && <span className="bg-custom-orange text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">EN VIVO</span>}
+                  </div>
                   <h3 className="text-xl font-semibold text-white mb-2">{p.title}</h3>
                   <p className="text-gray-400 mb-1">{p.description}</p>
                   <p className="text-xs text-slate-400">{p.host}</p>

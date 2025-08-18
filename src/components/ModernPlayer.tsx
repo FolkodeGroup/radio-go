@@ -5,7 +5,16 @@ const STREAM_URL = import.meta.env.VITE_STREAM_URL || "";
 
 const bars = Array.from({ length: 20 });
 
-const Player: React.FC = () => {
+type PlayerProps = {
+  currentLive?: {
+    title: string;
+    time: string;
+    description: string;
+    host: string;
+  } | null;
+};
+
+const Player: React.FC<PlayerProps> = ({ currentLive }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.8);
@@ -126,9 +135,17 @@ const Player: React.FC = () => {
           </div>
           <div className="text-center">
             <h3 className="text-white text-lg font-bold orbitron">RADIO GO</h3>
-            <p className="text-cyan-300 text-sm">
-              {error ? error : `En Vivo - ${playing ? "Transmitiendo" : "Detenido"}`}
-            </p>
+            {currentLive ? (
+              <>
+                <p className="text-custom-orange text-base font-bold animate-pulse">EN VIVO: {currentLive.title}</p>
+                <p className="text-cyan-300 text-xs">{currentLive.time} | {currentLive.host}</p>
+                <p className="text-slate-300 text-xs mb-1">{currentLive.description}</p>
+              </>
+            ) : (
+              <p className="text-cyan-300 text-sm">
+                {error ? error : `No hay programa en vivo`}
+              </p>
+            )}
           </div>
         </div>
         
@@ -152,8 +169,17 @@ const Player: React.FC = () => {
         
         {/* Información de la canción */}
         <div className="text-center">
-          <p className="text-white text-sm font-medium">Reproduciendo ahora</p>
-          <p className="text-cyan-300 text-xs">Música en Vivo</p>
+          {currentLive ? (
+            <>
+              <p className="text-white text-sm font-medium">Ahora en vivo:</p>
+              <p className="text-custom-orange text-base font-bold">{currentLive.title}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-white text-sm font-medium">Reproduciendo ahora</p>
+              <p className="text-cyan-300 text-xs">Música en Vivo</p>
+            </>
+          )}
         </div>
       </div>
       
