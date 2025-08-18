@@ -14,7 +14,8 @@ type PlayerProps = {
   } | null;
 };
 
-const METADATA_URL = "https://cast4.prosandovaal.com/public/radio_go/nowplaying.json";
+// Cambiar la URL de METADATA_URL
+const METADATA_URL = "https://cast4.prosandoval.com/api/nowplaying/9";
 
 const Player: React.FC<PlayerProps> = ({ currentLive }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -30,12 +31,11 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
         const res = await fetch(METADATA_URL);
         if (!res.ok) return;
         const data = await res.json();
-        // Estructura estándar AzuraCast/Icecast
         const np = data.now_playing || data;
         setSong({
-          title: np.song?.title || np.title || '',
-          artist: np.song?.artist || np.artist || '',
-          cover: np.song?.art || np.art || null
+          title: np.title || '',
+          artist: np.artist || '',
+          cover: np.art || null
         });
       } catch {
         // No actualizar si hay error
