@@ -121,58 +121,87 @@ export default function AdminProgramEditor() {
   };
 
   return (
-    <div className="p-4">
-      <h3 className="text-xl font-bold text-custom-orange mb-4">Editar Programación</h3>
-      <ul className="mb-6">
+    <div className="p-4 max-w-3xl mx-auto">
+      <h3 className="text-2xl font-bold text-custom-orange mb-6 text-center tracking-wide">Panel de Programación</h3>
+      <ul className="mb-8 space-y-4">
         {programs.map((p, idx) => (
-          <li key={idx} className="mb-2 bg-slate-800 rounded p-3 flex flex-col md:flex-row md:items-center gap-2">
+          <li key={idx} className="bg-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-4 shadow-lg border-l-4 border-custom-teal">
             {editingIndex === idx ? (
-              <>
-                <input className="rounded px-2 py-1 mr-2" placeholder="Título" value={newProgram.title} onChange={e => setNewProgram({ ...newProgram, title: e.target.value })} />
-                <input className="rounded px-2 py-1 mr-2" type="time" placeholder="Inicio" value={newProgram.start_time} onChange={e => setNewProgram({ ...newProgram, start_time: e.target.value })} />
-                <input className="rounded px-2 py-1 mr-2" type="time" placeholder="Fin" value={newProgram.end_time} onChange={e => setNewProgram({ ...newProgram, end_time: e.target.value })} />
-                <select className="rounded px-2 py-1 mr-2" value={newProgram.day_of_week} onChange={e => setNewProgram({ ...newProgram, day_of_week: Number(e.target.value) })}>
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input className="input-admin" placeholder="Título del programa" value={newProgram.title} onChange={e => setNewProgram({ ...newProgram, title: e.target.value })} />
+                <div className="flex gap-2">
+                  <input className="input-admin w-1/2" type="time" placeholder="Inicio" value={newProgram.start_time} onChange={e => setNewProgram({ ...newProgram, start_time: e.target.value })} />
+                  <input className="input-admin w-1/2" type="time" placeholder="Fin" value={newProgram.end_time} onChange={e => setNewProgram({ ...newProgram, end_time: e.target.value })} />
+                </div>
+                <select className="input-admin" value={newProgram.day_of_week} onChange={e => setNewProgram({ ...newProgram, day_of_week: Number(e.target.value) })}>
                   {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][d-1]}</option>)}
                 </select>
-                <input className="rounded px-2 py-1 mr-2" placeholder="Imagen URL" value={newProgram.image_url} onChange={e => setNewProgram({ ...newProgram, image_url: e.target.value })} />
-                <input className="rounded px-2 py-1 mr-2" placeholder="Conductor" value={newProgram.host} onChange={e => setNewProgram({ ...newProgram, host: e.target.value })} />
-                <input className="rounded px-2 py-1 mr-2" placeholder="Descripción" value={newProgram.description} onChange={e => setNewProgram({ ...newProgram, description: e.target.value })} />
-                <label className="flex items-center gap-1 text-xs">
-                  <input type="checkbox" checked={newProgram.live} onChange={e => setNewProgram({ ...newProgram, live: e.target.checked })} /> En vivo
-                </label>
-                <button className="bg-custom-teal text-white px-2 py-1 rounded ml-2" onClick={handleSave}>Guardar</button>
-              </>
+                <input className="input-admin" placeholder="Imagen URL" value={newProgram.image_url} onChange={e => setNewProgram({ ...newProgram, image_url: e.target.value })} />
+                <input className="input-admin" placeholder="Conductor" value={newProgram.host} onChange={e => setNewProgram({ ...newProgram, host: e.target.value })} />
+                <input className="input-admin col-span-2" placeholder="Descripción" value={newProgram.description} onChange={e => setNewProgram({ ...newProgram, description: e.target.value })} />
+                <div className="flex items-center gap-2 col-span-2">
+                  <label className="flex items-center gap-2 text-xs font-semibold">
+                    <input type="checkbox" checked={newProgram.live} onChange={e => setNewProgram({ ...newProgram, live: e.target.checked })} /> En vivo
+                  </label>
+                  <button className="btn-admin-save ml-auto" onClick={handleSave}>Guardar</button>
+                </div>
+              </div>
             ) : (
-              <>
-                <span className="font-bold text-white">{p.title}</span>
-                <span className="text-cyan-400 font-mono">{p.start_time} - {p.end_time}</span>
-                <span className="text-white text-xs">{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][p.day_of_week-1]}</span>
-                <span className="text-white text-xs">{p.host}</span>
-                <span className="text-slate-300 text-xs">{p.description}</span>
-                {p.image_url && <img src={p.image_url} alt="img" className="h-8 w-8 object-cover rounded" />}
+              <div className="w-full grid grid-cols-1 md:grid-cols-6 gap-2 items-center">
+                <span className="font-bold text-white col-span-2 truncate">{p.title}</span>
+                <span className="text-cyan-400 font-mono col-span-1">{p.start_time} - {p.end_time}</span>
+                <span className="text-white text-xs col-span-1">{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][p.day_of_week-1]}</span>
+                <span className="text-white text-xs col-span-1 truncate">{p.host}</span>
+                <span className="text-slate-300 text-xs col-span-1 truncate">{p.description}</span>
+                {p.image_url && <img src={p.image_url} alt="img" className="h-8 w-8 object-cover rounded shadow border border-custom-teal" />}
                 <span className={`text-xs font-bold ${p.live ? 'text-red-400' : 'text-blue-400'}`}>{p.live ? 'EN VIVO' : 'PRÓXIMO'}</span>
-                <button className="bg-custom-orange text-white px-2 py-1 rounded ml-2" onClick={() => handleEdit(idx)}>Editar</button>
-                <button className="bg-red-600 text-white px-2 py-1 rounded ml-2" onClick={() => handleDelete(idx)}>Eliminar</button>
-              </>
+                <button className="btn-admin-edit" onClick={() => handleEdit(idx)}>Editar</button>
+                <button className="btn-admin-delete" onClick={() => handleDelete(idx)}>Eliminar</button>
+              </div>
             )}
           </li>
         ))}
       </ul>
-      <div className="bg-slate-900 rounded p-4 flex flex-col gap-2 mb-2">
-        <input className="rounded px-2 py-1" placeholder="Título" value={newProgram.title} onChange={e => setNewProgram({ ...newProgram, title: e.target.value })} />
-        <input className="rounded px-2 py-1" type="time" placeholder="Inicio" value={newProgram.start_time} onChange={e => setNewProgram({ ...newProgram, start_time: e.target.value })} />
-        <input className="rounded px-2 py-1" type="time" placeholder="Fin" value={newProgram.end_time} onChange={e => setNewProgram({ ...newProgram, end_time: e.target.value })} />
-        <select className="rounded px-2 py-1" value={newProgram.day_of_week} onChange={e => setNewProgram({ ...newProgram, day_of_week: Number(e.target.value) })}>
-          {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][d-1]}</option>)}
-        </select>
-        <input className="rounded px-2 py-1" placeholder="Imagen URL" value={newProgram.image_url} onChange={e => setNewProgram({ ...newProgram, image_url: e.target.value })} />
-        <input className="rounded px-2 py-1" placeholder="Conductor" value={newProgram.host} onChange={e => setNewProgram({ ...newProgram, host: e.target.value })} />
-        <input className="rounded px-2 py-1" placeholder="Descripción" value={newProgram.description} onChange={e => setNewProgram({ ...newProgram, description: e.target.value })} />
-        <label className="flex items-center gap-1 text-xs">
-          <input type="checkbox" checked={newProgram.live} onChange={e => setNewProgram({ ...newProgram, live: e.target.checked })} /> En vivo
-        </label>
-        <button className="bg-custom-teal text-white px-4 py-2 rounded-lg font-semibold hover:bg-custom-orange transition mt-2" onClick={handleAdd}>Agregar Programa</button>
+      <div className="bg-slate-900 rounded-xl p-6 flex flex-col gap-4 shadow-lg border-l-4 border-custom-orange">
+        <h4 className="text-lg font-bold text-custom-teal mb-2">Agregar Nuevo Programa</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input className="input-admin" placeholder="Título del programa" value={newProgram.title} onChange={e => setNewProgram({ ...newProgram, title: e.target.value })} />
+          <div className="flex gap-2">
+            <input className="input-admin w-1/2" type="time" placeholder="Inicio" value={newProgram.start_time} onChange={e => setNewProgram({ ...newProgram, start_time: e.target.value })} />
+            <input className="input-admin w-1/2" type="time" placeholder="Fin" value={newProgram.end_time} onChange={e => setNewProgram({ ...newProgram, end_time: e.target.value })} />
+          </div>
+          <select className="input-admin" value={newProgram.day_of_week} onChange={e => setNewProgram({ ...newProgram, day_of_week: Number(e.target.value) })}>
+            {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][d-1]}</option>)}
+          </select>
+          <input className="input-admin" placeholder="Imagen URL" value={newProgram.image_url} onChange={e => setNewProgram({ ...newProgram, image_url: e.target.value })} />
+          <input className="input-admin" placeholder="Conductor" value={newProgram.host} onChange={e => setNewProgram({ ...newProgram, host: e.target.value })} />
+          <input className="input-admin col-span-2" placeholder="Descripción" value={newProgram.description} onChange={e => setNewProgram({ ...newProgram, description: e.target.value })} />
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <label className="flex items-center gap-2 text-xs font-semibold">
+            <input type="checkbox" checked={newProgram.live} onChange={e => setNewProgram({ ...newProgram, live: e.target.checked })} /> En vivo
+          </label>
+          <button className="btn-admin-add ml-auto" onClick={handleAdd}>Agregar Programa</button>
+        </div>
       </div>
+      {/* Estilos para inputs y botones admin */}
+      <style>{`
+        .input-admin {
+          @apply rounded-lg px-4 py-2 bg-slate-800 text-white border border-slate-700 focus:border-custom-teal focus:ring-2 focus:ring-custom-teal outline-none transition w-full;
+        }
+        .btn-admin-save {
+          @apply bg-custom-teal text-white px-4 py-2 rounded-lg font-semibold hover:bg-custom-orange transition shadow;
+        }
+        .btn-admin-edit {
+          @apply bg-custom-orange text-white px-3 py-1 rounded-lg font-semibold hover:bg-custom-teal transition shadow ml-2;
+        }
+        .btn-admin-delete {
+          @apply bg-red-600 text-white px-3 py-1 rounded-lg font-semibold hover:bg-red-800 transition shadow ml-2;
+        }
+        .btn-admin-add {
+          @apply bg-custom-teal text-white px-6 py-2 rounded-lg font-bold hover:bg-custom-orange transition shadow;
+        }
+      `}</style>
     </div>
   );
 }
