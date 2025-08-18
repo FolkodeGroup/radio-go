@@ -1,5 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { FaFacebook, FaTiktok, FaInstagram, FaTwitch } from "react-icons/fa";
+import { SiTunein } from "react-icons/si";
+
 
 
 type FooterProps = {
@@ -41,23 +44,26 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
             viewport={{ once: true }}
           >
             {[
-              { icon: "M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z", href: "#", label: "Twitter" },
-              { icon: "M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z", href: "#", label: "Facebook" },
-              { icon: "M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zm1.5-4.87h.01M6.5 2h11A4.5 4.5 0 0122 6.5v11a4.5 4.5 0 01-4.5 4.5h-11A4.5 4.5 0 012 17.5v-11A4.5 4.5 0 016.5 2z", href: "#", label: "Instagram" }
-            ].map((social, index) => (
-              <motion.a
-                key={index}
-                href={social.href}
-                className="w-10 h-10 bg-slate-800 hover:bg-cyan-600 rounded-full flex items-center justify-center text-white transition-colors"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                whileTap={{ scale: 0.9 }}
-                aria-label={social.label}
-              >
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={social.icon} />
-                </svg>
-              </motion.a>
-            ))}
+              { icon: FaFacebook, url: "https://www.facebook.com/profile.php?id=61579298256538", color: "text-blue-500", label: "Facebook" },
+              { icon: FaTiktok, url: "https://www.tiktok.com/@radiogodigital", color: "text-white", label: "Tiktok" },
+              { icon: FaInstagram, url: "https://www.instagram.com/radiogodigital", color: "text-pink-500", label: "Instagram" },
+              { icon: FaTwitch, url: "https://www.twitch.tv/radiogodigital", color: "text-purple-500", label: "Twitch" },
+              { icon: SiTunein, url: "https://tunein.com/radio/Radio-Go-s346452", color: "text-white", label: "TuneIn" },
+            ].map((social, index) => {
+              const Icon = social.icon;
+              return (
+                <motion.a
+                  key={index}
+                  href={social.url}
+                  className="w-10 h-10 bg-slate-800 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-colors"
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  whileTap={{ scale: 0.9 }}
+                  aria-label={social.label}
+                >
+                  <Icon className={`w-5 h-5 ${social.color}`} />
+                </motion.a>
+              );
+            })}
           </motion.div>
         </div>
         
@@ -91,8 +97,6 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
           <div className="space-y-2 text-slate-300">
             <p>📧 info@radiogo.com</p>
             <p>📞 +1 (555) 123-4567</p>
-            <p>📍 Tu Ciudad, País</p>
-            <p className="font-mono text-cyan-400">FM 91.6 MHz</p>
           </div>
         </motion.div>
       </div>
