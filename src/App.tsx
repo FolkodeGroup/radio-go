@@ -6,6 +6,8 @@ import Footer from "./components/Footer";
 import logo from "./assets/logo-radio.jpg";
 import Login from "./components/Login";
 import AdminPanel from "./components/AdminPanel";
+import { FaFacebook, FaTiktok, FaInstagram, FaTwitch} from "react-icons/fa";
+import { SiTunein } from 'react-icons/si';
 import "./styles.css";
 
 
@@ -52,7 +54,7 @@ const initialPrograms: Program[] = [
 
 const initialBanners: Banner[] = [
   { image: "https://cdn.discordapp.com/attachments/1271478849305051260/1406698409037140071/Copilot_20250817_145649.png?ex=68a3697b&is=68a217fb&hm=34c9f1da7638f8f63241343032697a8fc805bde75ebd058858a2d5b35c782f32&", url: "https://ejemplo.com/1", alt: "Banner 1" },
-  { image: "https://via.placeholder.com/728x90?text=Banner+2", url: "https://ejemplo.com/2", alt: "Banner 2" },
+  { image: "https://images.unsplash.com/photo-1485579149621-3123dd979885?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cmFkaW98ZW58MHx8MHx8fDA%3D", url: "https://ejemplo.com/2", alt: "Banner 2" },
 ];
 
 function App() {
@@ -137,12 +139,12 @@ function App() {
               target="_blank"
               rel="noopener noreferrer"
               className="block w-full mx-auto rounded-xl shadow-lg bg-slate-900/80 border border-cyan-700/30 overflow-hidden transition-all duration-500"
-              style={{ minHeight: 110, maxWidth: '100%' }}
+              style={{ minHeight: 270, maxWidth: '100%' }}
             >
               <img
                 src={banners[currentBanner].image}
                 alt={banners[currentBanner].alt}
-                className="w-[100%] h-[110px] object-cover rounded-xl transition-all duration-500"
+                className="w-[100%] h-[270px] object-cover rounded-xl transition-all duration-500"
                 style={{ maxWidth: '100%' }}
               />
             </a>
@@ -211,38 +213,45 @@ function App() {
             La mejor música y entretenimiento las 24 horas del día
           </motion.p>
           <motion.div
-            className="mb-16"
+            className="mb-8"
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.8 }}
           >
             <ModernPlayer />
           </motion.div>
-          {/* Stats */}
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 0.8 }}
-          >
-            {[
-              { number: "24/7", label: "En el aire" },
-              { number: "91.6", label: "FM MHz" },
-              { number: "∞", label: "Buena música" }
-            ].map((stat, index) => (
-              <motion.div
-                key={index}
-                className="glass rounded-lg p-6 border-l-4 border-custom-orange"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="text-3xl font-bold text-custom-teal orbitron mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-white font-medium">
-                  {stat.label}
-                </div>
-              </motion.div>
-            ))}
+          {/* Redes sociales */}
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <span> Escuchanos en </span>{" "}
+              <span className="text-custom-orange">Nuestras </span>{" "}
+              <span className="text-custom-teal">Redes</span>
+            </h2>
+            <div className="w-24 h-1 bg-custom-teal mx-auto mb-8"></div>
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-5 gap-8 max-w-3xl mx-auto card-login"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.8 }}
+            >
+              {[
+                { icon: FaFacebook, url: "https://facebook.com", color: "text-blue-500" },
+                { icon: FaTiktok, url: "https://tiktok.com", color: "text-white" },
+                { icon: FaInstagram, url: "https://instagram.com", color: "text-pink-500" },
+                { icon: FaTwitch, url: "https://twitch.tv", color: "text-purple-500" },
+                { icon: SiTunein, url: "https://tunein.com/radio/Radio-Go-s346452", color: "text-white" },
+              ].map((social, index) => (
+                <motion.a
+                  key={index}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.1 }}
+                  className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+                >
+                  <social.icon size={35} className={`text-2xl ${social.color}`} />
+                  <span className={`font-semibold ${social.color}`}></span>
+                </motion.a>
+              ))}
           </motion.div>
         </div>
       </section>

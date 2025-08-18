@@ -109,3 +109,9 @@ button:focus-visible {
     #cc5500 100%
   );
 }
+
+.card-login {
+  min-width: 7.5rem;
+  min-height: 7.5rem;
+  padding: 10px;
+}
