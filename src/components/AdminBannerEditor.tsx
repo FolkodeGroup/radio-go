@@ -1,5 +1,5 @@
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
+import { supabase } from '../supabaseClient';
 
 type Banner = {
   image: string;
@@ -7,19 +7,47 @@ type Banner = {
   alt: string;
 };
 
-type AdminBannerEditorProps = {
-  banners: Banner[];
-  setBanners: React.Dispatch<React.SetStateAction<Banner[]>>;
-};
-
-export default function AdminBannerEditor({ banners, setBanners }: AdminBannerEditorProps) {
+export default function AdminBannerEditor() {
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [newBanner, setNewBanner] = useState<Banner>({ image: "", url: "", alt: "" });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const handleAdd = () => {
+  // Refrescar banners desde Supabase
+  const fetchBannersFromDB = async () => {
+    const { data, error } = await supabase
+      .from('banners')
+      .select('image_url, link_url, title, active');
+    if (!error && data) {
+      setBanners(
+        data
+          .filter((b: { image_url: string; link_url: string; title: string; active: boolean }) => !!b && b.active)
+          .map((b: { image_url: string; link_url: string; title: string; active: boolean }) => ({
+            image: b.image_url,
+            url: b.link_url,
+            alt: b.title || '',
+          }))
+      );
+    }
+  };
+
+  useEffect(() => {
+    fetchBannersFromDB();
+  }, []);
+
+  const handleAdd = async () => {
     if (!newBanner.image || !newBanner.url) return;
-    setBanners([...banners, newBanner]);
-    setNewBanner({ image: "", url: "", alt: "" });
+    const { error } = await supabase.from('banners').insert({
+      image_url: newBanner.image,
+      link_url: newBanner.url,
+      title: newBanner.alt,
+      active: true
+    });
+    if (!error) {
+      await fetchBannersFromDB();
+      setNewBanner({ image: "", url: "", alt: "" });
+    } else {
+      alert('Error al agregar banner: ' + error.message);
+    }
   };
 
   const handleEdit = (idx: number) => {
@@ -27,17 +55,31 @@ export default function AdminBannerEditor({ banners, setBanners }: AdminBannerEd
     setNewBanner(banners[idx]);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editingIndex === null) return;
-    const updated = [...banners];
-    updated[editingIndex] = newBanner;
-    setBanners(updated);
-    setEditingIndex(null);
-    setNewBanner({ image: "", url: "", alt: "" });
+    const oldBanner = banners[editingIndex];
+    const { error } = await supabase.from('banners').update({
+      image_url: newBanner.image,
+      link_url: newBanner.url,
+      title: newBanner.alt
+    }).eq('image_url', oldBanner.image).eq('link_url', oldBanner.url);
+    if (!error) {
+      await fetchBannersFromDB();
+      setEditingIndex(null);
+      setNewBanner({ image: "", url: "", alt: "" });
+    } else {
+      alert('Error al editar banner: ' + error.message);
+    }
   };
 
-  const handleDelete = (idx: number) => {
-    setBanners(banners.filter((_, i) => i !== idx));
+  const handleDelete = async (idx: number) => {
+    const banner = banners[idx];
+    const { error } = await supabase.from('banners').delete().eq('image_url', banner.image).eq('link_url', banner.url);
+    if (!error) {
+      await fetchBannersFromDB();
+    } else {
+      alert('Error al eliminar banner: ' + error.message);
+    }
   };
 
   return (
