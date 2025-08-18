@@ -301,7 +301,7 @@ function App() {
               transition={{ delay: 0.8, duration: 0.8 }}
             >
               {[
-                { icon: FaFacebook, url: "https://www.facebook.com/radiogofest/?locale=es_LA", color: "text-blue-500" },
+                { icon: FaFacebook, url: "https://www.facebook.com/profile.php?id=61579298256538", color: "text-blue-500" },
                 { icon: FaTiktok, url: "https://www.tiktok.com/@radiogodigital", color: "text-white" },
                 { icon: FaInstagram, url: "https://www.instagram.com/radiogodigital", color: "text-pink-500" },
                 { icon: FaTwitch, url: "https://www.twitch.tv/radiogodigital", color: "text-purple-500" },
