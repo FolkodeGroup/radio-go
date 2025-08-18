@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type Dispatch, type SetStateAction, type ComponentType } from "react";
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "./supabaseClient";
 import { motion } from "framer-motion";
 import Header from "./components/Header";
 import ModernPlayer from "./components/ModernPlayer";
@@ -26,42 +28,61 @@ type Banner = {
   alt: string;
 };
 
-const initialPrograms: Program[] = [
-  {
-    title: "TRASnOCHE BLUE",
-    time: "01:00 - 06:00",
-    live: true,
-    description: "Música nocturna y conversación relajante",
-    host: "DJ Midnight"
-  },
-  {
-    title: "HABLEMOS TODO HOY",
-    time: "06:00 - 09:00",
-    live: false,
-    description: "Noticias del día y actualidad",
-    host: "María González"
-  },
-  {
-    title: "LA MAÑANA DE BLUE",
-    time: "09:00 - 13:00",
-    live: false,
-    description: "Música popular y entretenimiento",
-    host: "Carlos Méndez"
-  },
-];
-
-const initialBanners: Banner[] = [
-  { image: "https://via.placeholder.com/728x90?text=Banner+1", url: "https://ejemplo.com/1", alt: "Banner 1" },
-  { image: "https://via.placeholder.com/728x90?text=Banner+2", url: "https://ejemplo.com/2", alt: "Banner 2" },
-];
 
 function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [banners, setBanners] = useState<Banner[]>(initialBanners);
-  const [programs, setPrograms] = useState<Program[]>(initialPrograms);
+  const [user, setUser] = useState<User | null>(null);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  // Consultar datos reales de Supabase
+  useEffect(() => {
+    const fetchData = async () => {
+      // Banners
+      const { data: bannersData, error: bannersError } = await supabase
+        .from('banners')
+        .select('image_url, link_url, title, active');
+      if (!bannersError && bannersData) {
+        setBanners(
+          bannersData
+            .filter((b): b is { image_url: string; link_url: string; title: string; active: boolean } => !!b && b.active)
+            .map((b) => ({
+              image: b.image_url,
+              url: b.link_url,
+              alt: b.title || '',
+            }))
+        );
+      }
+      // Programs
+      const { data: programsData, error: programsError } = await supabase
+        .from('programs')
+        .select('name, start_time, end_time, description, host, day_of_week, id')
+        .order('start_time', { ascending: true });
+      if (!programsError && programsData) {
+        setPrograms(
+          programsData.map((p: {
+            name: string;
+            start_time: string;
+            end_time: string;
+            description: string;
+            host: string;
+            day_of_week: number;
+            id: string;
+          }) => ({
+            title: p.name,
+            time: `${p.start_time || ''} - ${p.end_time || ''}`,
+            live: false, // Puedes ajustar esto según tu lógica
+            description: p.description || '',
+            host: p.host || '',
+          }))
+        );
+      }
+    };
+    fetchData();
+  }, []);
   const [currentBanner, setCurrentBanner] = useState(0);
   const bannerInterval = useRef<number | null>(null);
+
 
   // Slider automático
   useEffect(() => {
@@ -86,19 +107,65 @@ function App() {
     }
   };
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    setUser(user);
     setIsAdmin(true);
     setShowLogin(false);
   };
 
+  // Mantener sesión sincronizada con Supabase
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setIsAdmin(!!user);
+    };
+    getSession();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsAdmin(!!session?.user);
+    });
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
   if (isAdmin) {
-    return <AdminPanel
-      onLogout={() => setIsAdmin(false)}
-      banners={banners}
-      setBanners={setBanners}
-      programs={programs}
-      setPrograms={setPrograms}
-    />;
+    type AdminPanelProps = {
+      banners: Banner[];
+      setBanners: Dispatch<SetStateAction<Banner[]>>;
+      programs: Program[];
+      setPrograms: Dispatch<SetStateAction<Program[]>>;
+    };
+    const AdminPanelComponent = AdminPanel as unknown as ComponentType<AdminPanelProps>;
+    return (
+      <div>
+        <div className="flex justify-end items-center p-4 bg-gray-900 text-white text-sm">
+          {user && (
+            <span className="mr-4">Logueado como: <span className="font-bold text-custom-teal">{user.email}</span></span>
+          )}
+          <button
+            className="bg-custom-orange text-white px-3 py-1 rounded hover:bg-custom-teal transition"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              setIsAdmin(false);
+              setUser(null);
+            }}
+          >
+            Cerrar sesión
+          </button>
+        </div>
+        <AdminPanelComponent
+          banners={banners}
+          setBanners={setBanners}
+          programs={programs}
+          setPrograms={setPrograms}
+        />
+      </div>
+    );
   }
 
   return (

@@ -1,34 +1,9 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import AdminProgramEditor from "./AdminProgramEditor";
 import AdminBannerEditor from "./AdminBannerEditor";
 
-import type { Dispatch, SetStateAction } from "react";
-
-type Banner = {
-  image: string;
-  url: string;
-  alt: string;
-};
-
-type Program = {
-  title: string;
-  time: string;
-  live: boolean;
-  description: string;
-  host: string;
-};
-
-type AdminPanelProps = {
-  onLogout: () => void;
-  banners: Banner[];
-  setBanners: Dispatch<SetStateAction<Banner[]>>;
-  programs: Program[];
-  setPrograms: Dispatch<SetStateAction<Program[]>>;
-};
-
-export default function AdminPanel({ onLogout, banners, setBanners, programs, setPrograms }: AdminPanelProps) {
+export default function AdminPanel() {
   const [section, setSection] = useState<"main" | "programs" | "banners">("main");
   return (
     <section className="min-h-screen flex flex-col items-center justify-center bg-custom-dark px-4 py-12">
@@ -59,22 +34,16 @@ export default function AdminPanel({ onLogout, banners, setBanners, programs, se
         )}
         {section === "programs" && (
           <>
-            <AdminProgramEditor programs={programs} setPrograms={setPrograms} />
+            <AdminProgramEditor />
             <button className="mt-6 text-sm text-cyan-400 underline hover:text-orange-400 transition" onClick={() => setSection("main")}>Volver al panel</button>
           </>
         )}
         {section === "banners" && (
           <>
-            <AdminBannerEditor banners={banners} setBanners={setBanners} />
+            <AdminBannerEditor />
             <button className="mt-6 text-sm text-cyan-400 underline hover:text-orange-400 transition" onClick={() => setSection("main")}>Volver al panel</button>
           </>
         )}
-        <button
-          className="mt-10 text-sm text-cyan-400 underline hover:text-orange-400 transition"
-          onClick={onLogout}
-        >
-          Cerrar sesión
-        </button>
       </motion.div>
     </section>
   );

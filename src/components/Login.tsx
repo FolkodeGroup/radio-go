@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { supabase } from '../supabaseClient';
 import { motion } from "framer-motion";
 import logo from '../assets/logo-radio.jpg';
 
@@ -13,20 +14,28 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setMessage("");
+    setLoading(true);
     if (!email || !password) {
       setError("Todos los campos son obligatorios");
+      setLoading(false);
       return;
     }
-    // Simulación: usuario y contraseña fijos
-    if (email === "demo@radio.com" && password === "1234") {
-      setError("");
-      onLoginSuccess();
+    // Solo login
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError(error.message);
     } else {
-      setError("Usuario o contraseña incorrectos");
+      setMessage("¡Login exitoso!");
+      onLoginSuccess();
     }
+    setLoading(false);
   };
 
   return (
@@ -81,11 +90,13 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           />
         </div>
         {error && <p className="text-orange-400 text-sm mb-2 text-center font-semibold">{error}</p>}
+        {message && <p className="text-green-400 text-sm mb-2 text-center font-semibold">{message}</p>}
         <button
           type="submit"
           className="w-full bg-gradient-to-r from-custom-teal to-custom-orange text-white font-bold py-2 px-4 rounded-lg shadow hover:from-custom-orange hover:to-custom-teal transition-colors duration-200 mt-2"
+          disabled={loading}
         >
-          Ingresar
+          {loading ? 'Procesando...' : 'Ingresar'}
         </button>
       </form>
     </section>

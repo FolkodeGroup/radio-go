@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from '../supabaseClient';
 
 type Program = {
   title: string;
@@ -8,12 +9,8 @@ type Program = {
   host: string;
 };
 
-type AdminProgramEditorProps = {
-  programs: Program[];
-  setPrograms: React.Dispatch<React.SetStateAction<Program[]>>;
-};
-
-export default function AdminProgramEditor({ programs, setPrograms }: AdminProgramEditorProps) {
+export default function AdminProgramEditor() {
+  const [programs, setPrograms] = useState<Program[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [newProgram, setNewProgram] = useState<Program>({
     title: "",
@@ -23,6 +20,37 @@ export default function AdminProgramEditor({ programs, setPrograms }: AdminProgr
     host: ""
   });
 
+  // Refrescar programas desde Supabase
+  const fetchProgramsFromDB = async () => {
+    const { data, error } = await supabase
+      .from('programs')
+      .select('name, start_time, end_time, description, host, day_of_week, id')
+      .order('start_time', { ascending: true });
+    if (!error && data) {
+      setPrograms(
+        data.map((p: {
+          name: string;
+          start_time: string;
+          end_time: string;
+          description: string;
+          host: string;
+          day_of_week: number;
+          id: string;
+        }) => ({
+          title: p.name,
+          time: `${p.start_time || ''} - ${p.end_time || ''}`,
+          live: false,
+          description: p.description || '',
+          host: p.host || '',
+        }))
+      );
+    }
+  };
+
+  useEffect(() => {
+    fetchProgramsFromDB();
+  }, []);
+
   // Editar
   const handleEdit = (idx: number) => {
     setEditingIndex(idx);
@@ -30,25 +58,48 @@ export default function AdminProgramEditor({ programs, setPrograms }: AdminProgr
   };
 
   // Guardar edición
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editingIndex !== null) {
-      const updated = [...programs];
-      updated[editingIndex] = newProgram;
-      setPrograms(updated);
-      setEditingIndex(null);
-      setNewProgram({ title: "", time: "", live: false, description: "", host: "" });
+      const oldProgram = programs[editingIndex];
+      const { error } = await supabase.from('programs').update({
+        name: newProgram.title,
+        description: newProgram.description,
+        host: newProgram.host,
+      }).eq('name', oldProgram.title).eq('description', oldProgram.description);
+      if (!error) {
+        await fetchProgramsFromDB();
+        setEditingIndex(null);
+        setNewProgram({ title: "", time: "", live: false, description: "", host: "" });
+      } else {
+        alert('Error al editar programa: ' + error.message);
+      }
     }
   };
 
   // Eliminar
-  const handleDelete = (idx: number) => {
-    setPrograms(programs.filter((_, i) => i !== idx));
+  const handleDelete = async (idx: number) => {
+    const program = programs[idx];
+    const { error } = await supabase.from('programs').delete().eq('name', program.title).eq('description', program.description);
+    if (!error) {
+      await fetchProgramsFromDB();
+    } else {
+      alert('Error al eliminar programa: ' + error.message);
+    }
   };
 
   // Agregar
-  const handleAdd = () => {
-    setPrograms([...programs, newProgram]);
-    setNewProgram({ title: "", time: "", live: false, description: "", host: "" });
+  const handleAdd = async () => {
+    const { error } = await supabase.from('programs').insert({
+      name: newProgram.title,
+      description: newProgram.description,
+      host: newProgram.host,
+    });
+    if (!error) {
+      await fetchProgramsFromDB();
+      setNewProgram({ title: "", time: "", live: false, description: "", host: "" });
+    } else {
+      alert('Error al agregar programa: ' + error.message);
+    }
   };
 
   return (
