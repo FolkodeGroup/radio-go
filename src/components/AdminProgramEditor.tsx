@@ -25,6 +25,16 @@ export default function AdminProgramEditor() {
     description: "",
     host: ""
   });
+  const [editProgram, setEditProgram] = useState<Program>({
+    title: "",
+    start_time: "",
+    end_time: "",
+    day_of_week: 1,
+    image_url: "",
+    live: false,
+    description: "",
+    host: ""
+  });
 
   // Refrescar programas desde Supabase
   const fetchProgramsFromDB = async () => {
@@ -64,7 +74,7 @@ export default function AdminProgramEditor() {
   // Editar
   const handleEdit = (idx: number) => {
     setEditingIndex(idx);
-  setNewProgram(programs[idx]);
+    setEditProgram(programs[idx]);
   };
 
   // Guardar edición
@@ -72,18 +82,18 @@ export default function AdminProgramEditor() {
     if (editingIndex !== null) {
       const oldProgram = programs[editingIndex];
       const { error } = await supabase.from('programs').update({
-        name: newProgram.title,
-        start_time: newProgram.start_time,
-        end_time: newProgram.end_time,
-        day_of_week: newProgram.day_of_week,
-        image_url: newProgram.image_url,
-        description: newProgram.description,
-        host: newProgram.host,
+        name: editProgram.title,
+        start_time: editProgram.start_time,
+        end_time: editProgram.end_time,
+        day_of_week: editProgram.day_of_week,
+        image_url: editProgram.image_url,
+        description: editProgram.description,
+        host: editProgram.host,
       }).eq('name', oldProgram.title).eq('description', oldProgram.description);
       if (!error) {
         await fetchProgramsFromDB();
         setEditingIndex(null);
-        setNewProgram({ title: "", start_time: "", end_time: "", day_of_week: 1, image_url: "", live: false, description: "", host: "" });
+        setEditProgram({ title: "", start_time: "", end_time: "", day_of_week: 1, image_url: "", live: false, description: "", host: "" });
       } else {
         alert('Error al editar programa: ' + error.message);
       }
@@ -121,87 +131,69 @@ export default function AdminProgramEditor() {
   };
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <h3 className="text-2xl font-bold text-custom-orange mb-6 text-center tracking-wide">Panel de Programación</h3>
-      <ul className="mb-8 space-y-4">
+    <div className="p-4 max-w-xl mx-auto">
+      <h3 className="text-2xl font-bold text-custom-orange mb-4 text-center">Panel de Programación</h3>
+      <ul className="mb-6">
         {programs.map((p, idx) => (
-          <li key={idx} className="bg-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center gap-4 shadow-lg border-l-4 border-custom-teal">
+          <li key={idx} className="mb-2 bg-slate-800 rounded p-3 flex flex-col gap-2 relative border border-slate-700">
             {editingIndex === idx ? (
-              <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input className="input-admin" placeholder="Título del programa" value={newProgram.title} onChange={e => setNewProgram({ ...newProgram, title: e.target.value })} />
-                <div className="flex gap-2">
-                  <input className="input-admin w-1/2" type="time" placeholder="Inicio" value={newProgram.start_time} onChange={e => setNewProgram({ ...newProgram, start_time: e.target.value })} />
-                  <input className="input-admin w-1/2" type="time" placeholder="Fin" value={newProgram.end_time} onChange={e => setNewProgram({ ...newProgram, end_time: e.target.value })} />
-                </div>
-                <select className="input-admin" value={newProgram.day_of_week} onChange={e => setNewProgram({ ...newProgram, day_of_week: Number(e.target.value) })}>
-                  {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][d-1]}</option>)}
-                </select>
-                <input className="input-admin" placeholder="Imagen URL" value={newProgram.image_url} onChange={e => setNewProgram({ ...newProgram, image_url: e.target.value })} />
-                <input className="input-admin" placeholder="Conductor" value={newProgram.host} onChange={e => setNewProgram({ ...newProgram, host: e.target.value })} />
-                <input className="input-admin col-span-2" placeholder="Descripción" value={newProgram.description} onChange={e => setNewProgram({ ...newProgram, description: e.target.value })} />
-                <div className="flex items-center gap-2 col-span-2">
-                  <label className="flex items-center gap-2 text-xs font-semibold">
-                    <input type="checkbox" checked={newProgram.live} onChange={e => setNewProgram({ ...newProgram, live: e.target.checked })} /> En vivo
-                  </label>
-                  <button className="btn-admin-save ml-auto" onClick={handleSave}>Guardar</button>
-                </div>
+              <div className="bg-slate-900 rounded p-4 mt-2 border border-slate-700 shadow-inner">
+                <form className="flex flex-col gap-2 w-full" onSubmit={e => { e.preventDefault(); handleSave(); }}>
+                  <input className="rounded px-2 py-1 border border-slate-600" placeholder="Título del programa" value={editProgram.title} onChange={e => setEditProgram({ ...editProgram, title: e.target.value })} />
+                  <div className="flex gap-2">
+                    <input className="rounded px-2 py-1 border border-slate-600 w-1/2" type="time" placeholder="Inicio" value={editProgram.start_time} onChange={e => setEditProgram({ ...editProgram, start_time: e.target.value })} />
+                    <input className="rounded px-2 py-1 border border-slate-600 w-1/2" type="time" placeholder="Fin" value={editProgram.end_time} onChange={e => setEditProgram({ ...editProgram, end_time: e.target.value })} />
+                  </div>
+                  <select className="rounded px-2 py-1 border border-slate-600" value={editProgram.day_of_week} onChange={e => setEditProgram({ ...editProgram, day_of_week: Number(e.target.value) })}>
+                    {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][d-1]}</option>)}
+                  </select>
+                  <input className="rounded px-2 py-1 border border-slate-600" placeholder="Imagen URL" value={editProgram.image_url} onChange={e => setEditProgram({ ...editProgram, image_url: e.target.value })} />
+                  <input className="rounded px-2 py-1 border border-slate-600" placeholder="Conductor" value={editProgram.host} onChange={e => setEditProgram({ ...editProgram, host: e.target.value })} />
+                  <input className="rounded px-2 py-1 border border-slate-600" placeholder="Descripción" value={editProgram.description} onChange={e => setEditProgram({ ...editProgram, description: e.target.value })} />
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-xs font-semibold">
+                      <input type="checkbox" checked={editProgram.live} onChange={e => setEditProgram({ ...editProgram, live: e.target.checked })} /> En vivo
+                    </label>
+                    <button type="submit" className="bg-custom-teal text-white px-3 py-1 rounded font-semibold hover:bg-custom-orange transition ml-auto">Guardar</button>
+                  </div>
+                </form>
               </div>
             ) : (
-              <div className="w-full grid grid-cols-1 md:grid-cols-6 gap-2 items-center">
-                <span className="font-bold text-white col-span-2 truncate">{p.title}</span>
-                <span className="text-cyan-400 font-mono col-span-1">{p.start_time} - {p.end_time}</span>
-                <span className="text-white text-xs col-span-1">{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][p.day_of_week-1]}</span>
-                <span className="text-white text-xs col-span-1 truncate">{p.host}</span>
-                <span className="text-slate-300 text-xs col-span-1 truncate">{p.description}</span>
+              <div className="flex flex-col md:flex-row md:items-center gap-2">
+                <span className="font-bold text-white truncate">{p.title}</span>
+                <span className="text-cyan-400 font-mono">{p.start_time} - {p.end_time}</span>
+                <span className="text-white text-xs">{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][p.day_of_week-1]}</span>
+                <span className="text-white text-xs truncate">{p.host}</span>
+                <span className="text-slate-300 text-xs truncate">{p.description}</span>
                 {p.image_url && <img src={p.image_url} alt="img" className="h-8 w-8 object-cover rounded shadow border border-custom-teal" />}
                 <span className={`text-xs font-bold ${p.live ? 'text-red-400' : 'text-blue-400'}`}>{p.live ? 'EN VIVO' : 'PRÓXIMO'}</span>
-                <button className="btn-admin-edit" onClick={() => handleEdit(idx)}>Editar</button>
-                <button className="btn-admin-delete" onClick={() => handleDelete(idx)}>Eliminar</button>
+                <button className="bg-custom-orange text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-500 transition" onClick={() => handleEdit(idx)}>Editar</button>
+                <button className="bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-red-800 transition" onClick={() => handleDelete(idx)}>Eliminar</button>
               </div>
             )}
           </li>
         ))}
       </ul>
-      <div className="bg-slate-900 rounded-xl p-6 flex flex-col gap-4 shadow-lg border-l-4 border-custom-orange">
-        <h4 className="text-lg font-bold text-custom-teal mb-2">Agregar Nuevo Programa</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input className="input-admin" placeholder="Título del programa" value={newProgram.title} onChange={e => setNewProgram({ ...newProgram, title: e.target.value })} />
-          <div className="flex gap-2">
-            <input className="input-admin w-1/2" type="time" placeholder="Inicio" value={newProgram.start_time} onChange={e => setNewProgram({ ...newProgram, start_time: e.target.value })} />
-            <input className="input-admin w-1/2" type="time" placeholder="Fin" value={newProgram.end_time} onChange={e => setNewProgram({ ...newProgram, end_time: e.target.value })} />
-          </div>
-          <select className="input-admin" value={newProgram.day_of_week} onChange={e => setNewProgram({ ...newProgram, day_of_week: Number(e.target.value) })}>
-            {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][d-1]}</option>)}
-          </select>
-          <input className="input-admin" placeholder="Imagen URL" value={newProgram.image_url} onChange={e => setNewProgram({ ...newProgram, image_url: e.target.value })} />
-          <input className="input-admin" placeholder="Conductor" value={newProgram.host} onChange={e => setNewProgram({ ...newProgram, host: e.target.value })} />
-          <input className="input-admin col-span-2" placeholder="Descripción" value={newProgram.description} onChange={e => setNewProgram({ ...newProgram, description: e.target.value })} />
+      <form className="bg-slate-900 rounded p-4 flex flex-col gap-3 mb-2 border border-slate-700 shadow-lg" onSubmit={e => { e.preventDefault(); handleAdd(); }}>
+        <label className="text-cyan-300 font-semibold text-sm">Agregar Nuevo Programa</label>
+        <input className="rounded px-2 py-1 border border-slate-600" placeholder="Título del programa" value={newProgram.title} onChange={e => setNewProgram({ ...newProgram, title: e.target.value })} />
+        <div className="flex gap-2">
+          <input className="rounded px-2 py-1 border border-slate-600 w-1/2" type="time" placeholder="Inicio" value={newProgram.start_time} onChange={e => setNewProgram({ ...newProgram, start_time: e.target.value })} />
+          <input className="rounded px-2 py-1 border border-slate-600 w-1/2" type="time" placeholder="Fin" value={newProgram.end_time} onChange={e => setNewProgram({ ...newProgram, end_time: e.target.value })} />
         </div>
+        <select className="rounded px-2 py-1 border border-slate-600" value={newProgram.day_of_week} onChange={e => setNewProgram({ ...newProgram, day_of_week: Number(e.target.value) })}>
+          {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][d-1]}</option>)}
+        </select>
+        <input className="rounded px-2 py-1 border border-slate-600" placeholder="Imagen URL" value={newProgram.image_url} onChange={e => setNewProgram({ ...newProgram, image_url: e.target.value })} />
+        <input className="rounded px-2 py-1 border border-slate-600" placeholder="Conductor" value={newProgram.host} onChange={e => setNewProgram({ ...newProgram, host: e.target.value })} />
+        <input className="rounded px-2 py-1 border border-slate-600" placeholder="Descripción" value={newProgram.description} onChange={e => setNewProgram({ ...newProgram, description: e.target.value })} />
         <div className="flex items-center gap-2 mt-2">
           <label className="flex items-center gap-2 text-xs font-semibold">
             <input type="checkbox" checked={newProgram.live} onChange={e => setNewProgram({ ...newProgram, live: e.target.checked })} /> En vivo
           </label>
-          <button className="btn-admin-add ml-auto" onClick={handleAdd}>Agregar Programa</button>
+          <button type="submit" className="bg-custom-teal text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 justify-center hover:bg-custom-orange transition ml-auto">Agregar Programa</button>
         </div>
-      </div>
-      {/* Estilos para inputs y botones admin */}
-      <style>{`
-        .input-admin {
-          @apply rounded-lg px-4 py-2 bg-slate-800 text-white border border-slate-700 focus:border-custom-teal focus:ring-2 focus:ring-custom-teal outline-none transition w-full;
-        }
-        .btn-admin-save {
-          @apply bg-custom-teal text-white px-4 py-2 rounded-lg font-semibold hover:bg-custom-orange transition shadow;
-        }
-        .btn-admin-edit {
-          @apply bg-custom-orange text-white px-3 py-1 rounded-lg font-semibold hover:bg-custom-teal transition shadow ml-2;
-        }
-        .btn-admin-delete {
-          @apply bg-red-600 text-white px-3 py-1 rounded-lg font-semibold hover:bg-red-800 transition shadow ml-2;
-        }
-        .btn-admin-add {
-          @apply bg-custom-teal text-white px-6 py-2 rounded-lg font-bold hover:bg-custom-orange transition shadow;
-        }
-      `}</style>
+      </form>
     </div>
   );
 }
