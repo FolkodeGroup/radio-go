@@ -107,10 +107,10 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
       >
         <div className="flex flex-col md:flex-row items-center justify-center gap-2">
           <p className="text-slate-400 text-sm">
-            © 2025 Radio Go. Todos los derechos reservados. | Diseñado por Folkoder
+            © 2025 Radio Go. Todos los derechos reservados. | Diseñado por <a href="https://folkode.vercel.app" target="_blank" rel="noopener noreferrer">Folkode</a>
           </p>
           <img
-            src="/favicon-16x16.png"
+            src="/src/assets/favicon-32x32.png"
             alt="Folkoder Logo"
             className="h-6 w-6"
           />

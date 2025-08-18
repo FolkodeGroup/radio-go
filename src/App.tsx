@@ -1,4 +1,25 @@
 import { useState, useEffect, useRef, type Dispatch, type SetStateAction, type ComponentType } from "react";
+// Loader global con logo
+function GlobalLoader() {
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-70">
+      <div className="flex flex-col items-center gap-4">
+        <div className="relative flex items-center justify-center w-24 h-24">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src={logo}
+              alt="Radio Go Logo"
+              className="w-20 h-20 rounded-full border-4 border-cyan-400 shadow-xl animate-pulse"
+              style={{ filter: "drop-shadow(0 0 20px rgba(20, 184, 166, 0.5))" }}
+            />
+          </div>
+          <div className="absolute inset-0 w-24 h-24 border-[6px] border-custom-orange border-t-transparent border-b-transparent rounded-full animate-spin mx-auto my-auto shadow-[0_0_32px_4px_rgba(249,115,22,0.25)]"></div>
+        </div>
+        <span className="text-cyan-300 font-bold text-lg tracking-widest animate-pulse mt-2">Cargando...</span>
+      </div>
+    </div>
+  );
+}
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 import { motion } from "framer-motion";
@@ -37,14 +58,17 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
+  // Estado de carga global
+  const [loading, setLoading] = useState(true);
   // Consultar datos reales de Supabase
   useEffect(() => {
+    let isMounted = true;
     const fetchData = async () => {
       // Banners
       const { data: bannersData, error: bannersError } = await supabase
         .from('banners')
         .select('image_url, link_url, title, active');
-      if (!bannersError && bannersData) {
+      if (isMounted && !bannersError && bannersData) {
         setBanners(
           bannersData
             .filter((b): b is { image_url: string; link_url: string; title: string; active: boolean } => !!b && b.active)
@@ -60,7 +84,7 @@ function App() {
         .from('programs')
         .select('name, start_time, end_time, description, host, day_of_week, id')
         .order('start_time', { ascending: true });
-      if (!programsError && programsData) {
+      if (isMounted && !programsError && programsData) {
         setPrograms(
           programsData.map((p: {
             name: string;
@@ -79,8 +103,11 @@ function App() {
           }))
         );
       }
+      // Oculta loader tras ambos fetch
+      setTimeout(() => { if (isMounted) setLoading(false); }, 200); // delay mínimo para evitar parpadeo
     };
     fetchData();
+    return () => { isMounted = false; };
   }, []);
   const [currentBanner, setCurrentBanner] = useState(0);
   const bannerInterval = useRef<number | null>(null);
@@ -169,6 +196,8 @@ function App() {
       </div>
     );
   }
+
+  if (loading) return <GlobalLoader />;
 
   return (
     <div className="min-h-screen bg-custom-dark">
@@ -347,18 +376,21 @@ function App() {
           </h2>
           <div className="w-24 h-1 bg-custom-orange mx-auto mb-12"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {programs.length > 0 ? programs.map((p, idx) => (
-              <div
-                key={idx}
-                className={`bg-custom-dark rounded-lg p-6 transform hover:-translate-y-2 transition duration-300 shadow-lg border-l-4 ${p.live ? 'border-custom-orange' : 'border-custom-teal'} relative overflow-hidden group`}
-              >
-                <p className={`font-bold ${p.live ? 'text-custom-orange' : 'text-custom-teal'} mb-2`}>{p.time}</p>
-                <h3 className="text-xl font-semibold text-white mb-2">{p.title}</h3>
-                <p className="text-gray-400 mb-1">{p.description}</p>
-                <p className="text-xs text-slate-400">{p.host}</p>
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-              </div>
-            )) : (
+            {programs.length > 0 ? programs.map((p, idx) => {
+              const isTurquoise = idx % 2 === 0;
+              return (
+                <div
+                  key={idx}
+                  className={`bg-custom-dark rounded-lg p-6 transform hover:-translate-y-2 transition duration-300 shadow-lg border-l-4 ${isTurquoise ? 'border-custom-teal' : 'border-custom-orange'} relative overflow-hidden group`}
+                >
+                  <p className={`font-bold ${isTurquoise ? 'text-custom-teal' : 'text-custom-orange'} mb-2`}>{p.time}</p>
+                  <h3 className="text-xl font-semibold text-white mb-2">{p.title}</h3>
+                  <p className="text-gray-400 mb-1">{p.description}</p>
+                  <p className="text-xs text-slate-400">{p.host}</p>
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
+                </div>
+              );
+            }) : (
               <div className="col-span-3 text-center text-slate-400 py-8">No hay programas cargados.</div>
             )}
           </div>
