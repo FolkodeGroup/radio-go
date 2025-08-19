@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect } from "react";
+
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 
 const STREAM_URL = import.meta.env.VITE_STREAM_URL || "";
@@ -18,108 +19,108 @@ type PlayerProps = {
 const Player: React.FC<PlayerProps> = ({ currentLive }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const reconnectTimer = useRef<number | null>(null);
-  const stallChecker = useRef<number | null>(null);
-
-  // NUEVO: Una 'key' para forzar la recreación del elemento <audio>
-  const [audioKey, setAudioKey] = useState(Date.now());
 
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.4);
   const [currentTime, setCurrentTime] = useState("00:00");
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [song, setSong] = useState<{ title: string; artist: string; cover: string | null }>({ title: 'Cargando...', artist: '', cover: null });
-  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'stalled' | 'error'>('idle');
 
-  // --- Lógica de Reconexión Automática ---
-  const attemptReconnect = () => {
-    if (isLoading) return; // Ya está en proceso
+  const play = useCallback(() => {
+    if (!audioRef.current) return;
 
-    // No reconectar si el usuario pausó intencionalmente
-    if (audioRef.current?.dataset.manualPause === 'true') return;
+    setStatus('loading');
+    audioRef.current.src = STREAM_URL;
+    audioRef.current.load();
+    audioRef.current.play()
+      .then(() => {
+        setPlaying(true);
+        setStatus('playing');
+        setError(null);
+      })
+      .catch((err) => {
+        console.error("Error al intentar reproducir:", err);
+        setError("No se pudo iniciar el stream.");
+        setStatus('error');
+        setPlaying(false);
+      });
+  }, []);
 
-    console.log("Iniciando intento de reconexión...");
-    setIsLoading(true);
-    setStatusMessage("Conexión inestable. Reconectando...");
+  const pause = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setPlaying(false);
+    setStatus('idle');
+  }, []);
 
-    // Limpiar timers antiguos
-    if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+  const attemptReconnect = useCallback(() => {
+    if (status === 'loading') return; // Already trying to connect/reconnect
+
+    console.log("Intentando reconectar...");
+    setStatus('loading');
+    setError("Conexión perdida. Reconectando...");
+
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current);
+    }
 
     reconnectTimer.current = window.setTimeout(() => {
-      console.log("Forzando la recreación del elemento de audio.");
-      // MODIFICADO: Cambiamos la key para destruir y crear un nuevo <audio>
-      setAudioKey(Date.now());
-    }, 3000); // Espera 3 segundos
-  };
+      play();
+    }, 3000);
+  }, [play, status]);
 
-  // --- Efectos para manejar el ciclo de vida del audio ---
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    let lastPlaybackTime = 0;
+    const handleStalled = () => {
+      console.warn("Stream stalled. Intentando reconectar...");
+      setStatus('stalled');
+      attemptReconnect();
+    };
 
     const handleError = (e: Event) => {
-      console.error('Evento de error de audio:', e);
+      console.error("Error de audio:", e);
+      setStatus('error');
       attemptReconnect();
     };
 
-    const handleStalled = () => {
-      console.warn('El stream se ha detenido (stalled).');
-      attemptReconnect();
-    };
+    let stallDetector: number;
 
-    const handleCanPlay = () => {
-        console.log("Stream listo para reproducir (canplay).");
-        setIsLoading(false);
-        setStatusMessage(null);
-        // Si no fue una pausa manual, darle play
-        if (audio.dataset.manualPause !== 'true') {
-            audio.play().catch(e => console.error("Autoplay bloqueado tras reconexión:", e));
-        }
+    const handlePlay = () => {
+        let lastTime = audio.currentTime;
+        stallDetector = window.setInterval(() => {
+            if (audio.paused) return;
+            if (audio.currentTime === lastTime) {
+                console.warn("Stall detectado (currentTime no avanza).");
+                handleStalled();
+            }
+            lastTime = audio.currentTime;
+        }, 4000); // Check every 4 seconds
     };
-
-    const handlePlaying = () => {
-        setPlaying(true);
-        setIsLoading(false);
-        setStatusMessage(null);
-    }
 
     const handlePause = () => {
-        // Solo marcar como "no reproduciendo" si no estamos en medio de una reconexión
-        if (!isLoading) {
-            setPlaying(false);
-        }
-    }
+        if (stallDetector) clearInterval(stallDetector);
+    };
 
-    // Monitor de congelamiento
-    stallChecker.current = window.setInterval(() => {
-      if (audio.paused || isLoading) return;
-
-      if (audio.currentTime === lastPlaybackTime && audio.currentTime > 0) {
-        console.warn('Stream congelado detectado (currentTime no avanza). Forzando reconexión.');
-        attemptReconnect();
-      }
-      lastPlaybackTime = audio.currentTime;
-    }, 4000); // Revisa cada 4 segundos
-
-    audio.addEventListener('error', handleError);
     audio.addEventListener('stalled', handleStalled);
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('playing', handlePlaying);
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
 
+
     return () => {
-      audio.removeEventListener('error', handleError);
       audio.removeEventListener('stalled', handleStalled);
-      audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('playing', handlePlaying);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      if (stallChecker.current) clearInterval(stallChecker.current);
+      if (stallDetector) clearInterval(stallDetector);
     };
-  }, [audioKey, isLoading]); // Se re-ejecuta cuando el audio se recrea
+  }, [attemptReconnect]);
 
-  // --- Efecto para buscar metadatos de la canción ---
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
@@ -137,11 +138,10 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       }
     };
     fetchMetadata();
-    const metaInterval = setInterval(fetchMetadata, 8000);
-    return () => clearInterval(metaInterval);
+    const interval = window.setInterval(fetchMetadata, 8000);
+    return () => clearInterval(interval);
   }, []);
 
-  // --- Efecto para el reloj ---
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
@@ -150,30 +150,11 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // --- Función para Play/Pause ---
-  const togglePlay = async () => {
-    if (!audioRef.current) return;
-
-    if (isLoading) return; // No permitir interacción mientras se reconecta
-
+  const togglePlay = () => {
     if (playing) {
-      audioRef.current.pause();
-      audioRef.current.dataset.manualPause = 'true';
-      setPlaying(false);
+      pause();
     } else {
-      audioRef.current.dataset.manualPause = 'false';
-      setIsLoading(true);
-      setStatusMessage("Conectando al stream...");
-      try {
-        // En algunos navegadores, es más seguro recargar la fuente antes de play
-        audioRef.current.src = STREAM_URL;
-        await audioRef.current.play();
-        // El estado 'playing' se actualizará con el evento 'onPlaying'
-      } catch (err) {
-        console.error('Error al intentar reproducir:', err);
-        setStatusMessage("No se pudo iniciar el stream.");
-        setIsLoading(false);
-      }
+      play();
     }
   };
 
@@ -183,14 +164,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     if (audioRef.current) audioRef.current.volume = newVolume;
   };
 
-  // Mensaje a mostrar en la UI
-  const displayMessage = isLoading
-    ? statusMessage
-    : (currentLive ? `EN VIVO: ${currentLive.title}` : 'Música en vivo');
-  const messageColorClass = isLoading
-    ? 'text-yellow-400 animate-pulse'
-    : (currentLive ? 'text-custom-orange animate-pulse' : 'text-cyan-300');
-
+  const isReconnecting = status === 'loading' || status === 'stalled';
 
   return (
     <motion.div
@@ -199,8 +173,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 1 }}
     >
-      {/* MODIFICADO: Se añade la 'key' para forzar la recreación */}
-      <audio ref={audioRef} key={audioKey} preload="auto" crossOrigin="anonymous" />
+      <audio ref={audioRef} preload="none" crossOrigin="anonymous" />
 
       <div className="bg-black rounded-xl p-6 mb-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 to-blue-900/20"></div>
@@ -224,10 +197,18 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           </div>
           <div className="text-center mt-2 min-h-[60px]">
             <h3 className="text-white text-lg font-bold orbitron">RADIO GO</h3>
-            <p className={`text-base font-bold ${messageColorClass}`}>
-                {displayMessage}
-            </p>
-            {currentLive && !isLoading && <p className="text-cyan-300 text-xs">{currentLive.time} | {currentLive.host}</p>}
+            {isReconnecting ? (
+                <p className="text-yellow-400 text-sm animate-pulse">{error}</p>
+            ) : currentLive ? (
+              <>
+                <p className="text-custom-orange text-base font-bold animate-pulse">EN VIVO: {currentLive.title}</p>
+                <p className="text-cyan-300 text-xs">{currentLive.time} | {currentLive.host}</p>
+              </>
+            ) : (
+              <p className="text-cyan-300 text-sm">
+                {error ? <span className="text-red-400">{error}</span> : `Música en vivo`}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-end justify-center gap-1 h-16 mb-4">
@@ -247,7 +228,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 rounded-full flex items-center justify-center text-white shadow-lg transition-all pulse-glow disabled:opacity-50 disabled:cursor-not-allowed"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          disabled={isLoading}
+          disabled={isReconnecting}
         >
           {playing ? (
             <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
