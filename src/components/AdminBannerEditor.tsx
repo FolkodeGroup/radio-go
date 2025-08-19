@@ -112,13 +112,13 @@ export default function AdminBannerEditor() {
   };
 
   return (
-    <div className="p-4 max-w-xl mx-auto">
+    <div className="admin-banner-editor p-4 max-w-xl mx-auto ">
       <h3 className="text-2xl font-bold text-custom-orange mb-4 text-center">Editar Banners</h3>
       {successMsg && <div className="bg-green-700 text-white rounded px-3 py-2 mb-2 text-center animate-pulse">{successMsg}</div>}
       {errorMsg && <div className="bg-red-700 text-white rounded px-3 py-2 mb-2 text-center animate-pulse">{errorMsg}</div>}
       <ul className="mb-6">
         {banners.map((b, idx) => (
-          <li key={idx} className="mb-2 bg-slate-800 rounded p-3 flex flex-col gap-2 relative border border-slate-700">
+          <li key={idx} className="mb-2 bg-slate-800 rounded p-3 flex flex-col gap-2 relative border border-slate-700 banner-cards">
             <div className="flex items-center gap-3 flex-1">
               <img src={b.image} alt={b.alt} className="w-32 h-10 object-cover rounded border border-cyan-700" />
               <div className="flex flex-col flex-1 min-w-0">

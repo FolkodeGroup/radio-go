@@ -115,3 +115,16 @@ button:focus-visible {
   min-height: 7.5rem;
   padding: 10px;
 }
+
+@media (max-width: 420px) {
+  .admin-banner-editor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .banner-cards{
+    width: 23rem;
+    align-items: center;
+  }
+}
