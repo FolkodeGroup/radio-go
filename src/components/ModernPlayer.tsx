@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 
@@ -75,10 +74,17 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    let stallDetector: number;
+    let stallTimeout: number | null = null;
+
     const handleStalled = () => {
-      console.warn("Stream stalled. Intentando reconectar...");
+      console.warn("Stream stalled. Esperando antes de reconectar...");
       setStatus('stalled');
-      attemptReconnect();
+      // Esperar 15 segundos antes de intentar reconectar
+      if (stallTimeout) clearTimeout(stallTimeout);
+      stallTimeout = window.setTimeout(() => {
+        attemptReconnect();
+      }, 15000);
     };
 
     const handleError = (e: Event) => {
@@ -87,8 +93,6 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       attemptReconnect();
     };
 
-    let stallDetector: number;
-
     const handlePlay = () => {
         let lastTime = audio.currentTime;
         stallDetector = window.setInterval(() => {
@@ -96,6 +100,13 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
             if (audio.currentTime === lastTime) {
                 console.warn("Stall detectado (currentTime no avanza).");
                 handleStalled();
+            } else {
+                // Si el audio avanza, cancelar cualquier reconexión pendiente
+                if (stallTimeout) {
+                  clearTimeout(stallTimeout);
+                  stallTimeout = null;
+                  setStatus('playing');
+                }
             }
             lastTime = audio.currentTime;
         }, 4000); // Check every 4 seconds
@@ -103,13 +114,16 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
 
     const handlePause = () => {
         if (stallDetector) clearInterval(stallDetector);
+        if (stallTimeout) {
+          clearTimeout(stallTimeout);
+          stallTimeout = null;
+        }
     };
 
     audio.addEventListener('stalled', handleStalled);
     audio.addEventListener('error', handleError);
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
-
 
     return () => {
       audio.removeEventListener('stalled', handleStalled);
@@ -118,6 +132,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       audio.removeEventListener('pause', handlePause);
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       if (stallDetector) clearInterval(stallDetector);
+      if (stallTimeout) clearTimeout(stallTimeout);
     };
   }, [attemptReconnect]);
 
