@@ -193,12 +193,12 @@ function App() {
     const AdminPanelComponent = AdminPanel as unknown as ComponentType<AdminPanelProps>;
     return (
       <div>
-        <div className="flex justify-end items-center p-4 bg-gray-900 text-white text-sm">
+        <div className="flex justify-end items-center p-4 bg-gray-900 text-white text-sm logout-button">
           {user && (
             <span className="mr-4">Logueado como: <span className="font-bold text-custom-teal">{user.email}</span></span>
           )}
           <button
-            className="bg-custom-orange text-white px-3 py-1 rounded hover:bg-custom-teal transition"
+            className="bg-custom-orange text-white px-3 py-1 rounded hover:bg-custom-teal transition mt-4"
             onClick={async () => {
               await supabase.auth.signOut();
               setIsAdmin(false);

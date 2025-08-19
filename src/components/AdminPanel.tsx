@@ -35,13 +35,13 @@ export default function AdminPanel() {
         {section === "programs" && (
           <>
             <AdminProgramEditor />
-            <button className="mt-6 text-sm text-cyan-400 underline hover:text-orange-400 transition" onClick={() => setSection("main")}>Volver al panel</button>
+            <button className="mt-6 text-sm text-cyan-400 underline hover:text-orange-400 transition btn-banner" onClick={() => setSection("main")}>Volver al panel</button>
           </>
         )}
         {section === "banners" && (
           <>
             <AdminBannerEditor />
-            <button className="mt-6 text-sm text-cyan-400 underline hover:text-orange-400 transition" onClick={() => setSection("main")}>Volver al panel</button>
+            <button className="mt-6 text-sm text-cyan-400 underline hover:text-orange-400 transition btn-banner" onClick={() => setSection("main")}>Volver al panel</button>
           </>
         )}
       </motion.div>
