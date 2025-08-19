@@ -146,8 +146,8 @@ export default function AdminBannerEditor() {
               </div>
             ) : (
               <div className="flex gap-2 mt-2 md:mt-0">
-                <button className="bg-custom-orange text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-500 transition" onClick={() => handleEdit(idx)} title="Editar"><FaEdit />Editar</button>
-                <button className="bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-red-800 transition" onClick={() => handleDelete(idx)} title="Eliminar"><FaTrash />Eliminar</button>
+                <button className="bg-custom-orange text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-500 transition btn-banner" onClick={() => handleEdit(idx)} title="Editar"><FaEdit />Editar</button>
+                <button className="bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-red-800 transition btn-banner" onClick={() => handleDelete(idx)} title="Eliminar"><FaTrash />Eliminar</button>
               </div>
             )}
           </li>

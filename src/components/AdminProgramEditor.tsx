@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { FaEdit, FaTrash} from "react-icons/fa";
 import { supabase } from '../supabaseClient';
 
 type Program = {
@@ -169,8 +170,10 @@ export default function AdminProgramEditor() {
                 <span className="text-slate-300 text-xs truncate">{p.description}</span>
                 {p.image_url && <img src={p.image_url} alt="img" className="h-8 w-8 object-cover rounded shadow border border-custom-teal" />}
                 <span className={`text-xs font-bold ${p.live ? 'text-red-400' : 'text-blue-400'}`}>{p.live ? 'EN VIVO' : 'PRÓXIMO'}</span>
-                <button className="bg-custom-orange text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-500 transition" onClick={() => handleEdit(idx)}>Editar</button>
-                <button className="bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-red-800 transition" onClick={() => handleDelete(idx)}>Eliminar</button>
+                <div className="flex flexrow gap-2 mt-2 md:mt-0 justify-center">
+                  <button className="bg-custom-orange text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-500 transition btn-program" onClick={() => handleEdit(idx)}><FaEdit />Editar</button>
+                  <button className="bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-red-800 transition btn-program" onClick={() => handleDelete(idx)}><FaTrash />Eliminar</button>
+                </div>
               </div>
             )}
           </li>

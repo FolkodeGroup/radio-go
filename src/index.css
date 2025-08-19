@@ -128,7 +128,7 @@ button:focus-visible {
     align-items: center;
   }
 
-  .btn-banner{
+  .btn-volver{
     width: 100%;
     text-align: center;
     margin-top: 1rem;
@@ -138,5 +138,17 @@ button:focus-visible {
     display: flex;
     flex-direction: column;
     align-items: center;
+  }
+
+  .btn-program {
+    width: 30%;
+    justify-content: center;
+    align-self: center;
+  }
+
+  .btn-banner{
+    width: 50% !important;
+    justify-content: center;
+    align-self: center;
   }
 }
