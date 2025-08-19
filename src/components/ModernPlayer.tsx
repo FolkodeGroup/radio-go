@@ -77,7 +77,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     const handleStalled = () => {
       console.warn("Stream stalled. Intentando reconectar...");
       setStatus('stalled');
-      attemptReconnect();
+      attemptReconnect(); // <-- SOLUCIÓN: reconectar activamente
     };
 
     const handleError = (e: Event) => {
@@ -93,11 +93,11 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
         stallDetector = window.setInterval(() => {
             if (audio.paused) return;
             if (audio.currentTime === lastTime) {
-                console.warn("Stall detectado (currentTime no avanza).");
-                handleStalled();
+                console.warn("Stall detectado (currentTime no avanza). Forzando reconexión.");
+                handleStalled(); // <-- SOLUCIÓN: reconectar activamente
             }
             lastTime = audio.currentTime;
-        }, 4000); // Check every 4 seconds
+        }, 4000); 
     };
 
     const handlePause = () => {
@@ -137,7 +137,8 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       }
     };
     fetchMetadata();
-    const interval = window.setInterval(fetchMetadata, 2000); // Reduced interval to 2 seconds
+    // MEJORA: intervalo reducido a 2 segundos
+    const interval = window.setInterval(fetchMetadata, 2000); 
     return () => clearInterval(interval);
   }, []);
 
