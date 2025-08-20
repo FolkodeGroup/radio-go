@@ -23,11 +23,12 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
   const reconnectAttempts = useRef(0);
 
   const [playing, setPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.4);
+  const [volume, setVolume] = useState(0.1);
   const [currentTime, setCurrentTime] = useState("00:00");
   const [error, setError] = useState<string | null>(null);
   const [song, setSong] = useState<{ title: string; artist: string; cover: string | null }>({ title: 'Cargando...', artist: '', cover: null });
   const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'stalled' | 'error'>('idle');
+  const [listeners, setListeners] = useState<number | null>(null);
 
   const clearAllTimers = useCallback(() => {
     if (reconnectTimer.current) {
@@ -282,6 +283,23 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch listeners
+  useEffect(() => {
+    const fetchListeners = async () => {
+      try {
+        const res = await fetch("https://cast4.prosandoval.com/api/nowplaying/9");
+        if (!res.ok) return;
+        const data = await res.json();
+        setListeners(data.listeners?.current ?? null);
+      } catch {
+        setListeners(null);
+      }
+    };
+    fetchListeners();
+    const interval = setInterval(fetchListeners, 5000); // cada 5 segundos
+    return () => clearInterval(interval);
+  }, []);
+
   const togglePlay = () => {
     if (playing) {
       pause();
@@ -311,7 +329,10 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 to-blue-900/20"></div>
         <div className="relative z-10 mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-cyan-400 text-sm font-mono">FM 91.6</span>
+            <span className="text-cyan-400 text-sm font-mono flex items-center gap-1">
+              <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              Oyentes: {listeners !== null ? listeners : '...'}
+            </span>
             <span className="text-cyan-400 text-sm font-mono">{currentTime}</span>
           </div>
           <div className="flex items-center justify-center gap-4 mb-2 min-h-[56px]">
