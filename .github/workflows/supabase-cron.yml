@@ -1,8 +1,10 @@
 name: Supabase Log Listeners Cron
 
+
 on:
   schedule:
     - cron: '*/1 * * * *' # cada minuto
+  workflow_dispatch:
 
 jobs:
   call-supabase-function:
