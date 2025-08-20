@@ -3,6 +3,7 @@ name: Supabase Send Daily Report
 on:
   schedule:
     - cron: '35 1 * * *' # todos los días a la 01:35 UTC
+  workflow_dispatch:
 
 jobs:
   call-supabase-send-report:
