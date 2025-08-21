@@ -17,8 +17,8 @@ const Header: React.FC = () => {
         </a>
         <nav className="hidden md:flex space-x-8 items-center">
           <a className="text-gray-300 hover:text-custom-orange transition duration-300 font-semibold" href="#inicio">Inicio</a>
-          <a className="text-gray-300 hover:text-custom-orange transition duration-300 font-semibold" href="#sobre-nosotros">Sobre Nosotros</a>
-          <a className="text-gray-300 hover:text-custom-orange transition duration-300 font-semibold" href="#programacion">Programación</a>
+          <a className="text-gray-300 hover:text-custom-orange transition duration-300 font-semibold" href="#nosotros">Sobre Nosotros</a>
+          <a className="text-gray-300 hover:text-custom-orange transition duration-300 font-semibold" href="#programación">Programación</a>
           <a className="text-gray-300 hover:text-custom-orange transition duration-300 font-semibold" href="#contacto">Contacto</a>
         </nav>
         <button className="md:hidden text-gray-300" id="mobile-menu-button">
@@ -27,8 +27,8 @@ const Header: React.FC = () => {
       </div>
       <div className="hidden md:hidden bg-custom-dark" id="mobile-menu">
         <a className="block py-2 px-6 text-gray-300 hover:bg-gray-800" href="#inicio">Inicio</a>
-        <a className="block py-2 px-6 text-gray-300 hover:bg-gray-800" href="#sobre-nosotros">Sobre Nosotros</a>
-        <a className="block py-2 px-6 text-gray-300 hover:bg-gray-800" href="#programacion">Programación</a>
+        <a className="block py-2 px-6 text-gray-300 hover:bg-gray-800" href="#nosotros">Sobre Nosotros</a>
+        <a className="block py-2 px-6 text-gray-300 hover:bg-gray-800" href="#programación">Programación</a>
         <a className="block py-2 px-6 text-gray-300 hover:bg-gray-800" href="#contacto">Contacto</a>
       </div>
     </motion.header>

@@ -16,7 +16,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         {/* Logo y descripción */}
         <div className="md:col-span-2">
-          <motion.div 
+          <motion.div
             className="text-3xl font-bold text-white mb-4 orbitron"
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -25,7 +25,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
           >
             RADIO<span className="text-cyan-400">GO</span>
           </motion.div>
-          <motion.p 
+          <motion.p
             className="text-slate-300 mb-6 max-w-md"
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -34,9 +34,9 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
           >
             Tu estación de radio favorita. Música, entretenimiento y la mejor programación las 24 horas del día.
           </motion.p>
-          
+
           {/* Redes sociales */}
-          <motion.div 
+          <motion.div
             className="flex gap-4"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -66,7 +66,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
             })}
           </motion.div>
         </div>
-        
+
         {/* Enlaces rápidos */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -85,7 +85,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
             ))}
           </ul>
         </motion.div>
-        
+
         {/* Contacto */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -95,14 +95,14 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
         >
           <h4 className="text-white font-bold mb-4">Contacto</h4>
           <div className="space-y-2 text-slate-300">
-            <p>📧 info@radiogo.com</p>
-            <p>📞 +1 (555) 123-4567</p>
+            <p>📧 radiogodigital@gmail.com</p>
+            <p>📞 +54 9 1162676918</p>
           </div>
         </motion.div>
       </div>
-      
+
       {/* Línea divisoria y copyright */}
-      <motion.div 
+      <motion.div
         className="border-t border-slate-800 pt-6 text-center"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}

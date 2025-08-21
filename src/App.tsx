@@ -373,7 +373,7 @@ function App() {
         </div>
       </section>
       {/* Sobre Nosotros Section */}
-      <section className="py-20 bg-custom-dark" id="sobre-nosotros">
+      <section className="py-20 bg-custom-dark" id="nosotros">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Sobre <span className="text-custom-orange">Radio</span>{" "}
@@ -390,7 +390,7 @@ function App() {
         </div>
       </section>
       {/* Nuestra Programación Section */}
-      <section className="py-20 bg-gray-900" id="programacion">
+      <section className="py-20 bg-gray-900" id="programación">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
             Nuestra <span className="text-custom-teal">Programación</span>
@@ -420,7 +420,7 @@ function App() {
           </div>
         </div>
       </section>
-      <div className="bg-custom-dark">
+      <div className="bg-custom-dark" id="contacto">
         <Footer onAdminLoginClick={() => setShowLogin(true)} isAdmin={isAdmin} />
       </div>
     </div>
