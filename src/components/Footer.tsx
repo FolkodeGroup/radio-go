@@ -113,11 +113,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
           <p className="text-slate-400 text-sm">
             © 2025 Radio Go. Todos los derechos reservados. | Diseñado por <a href="https://folkode.vercel.app" target="_blank" rel="noopener noreferrer">Folkode</a>
           </p>
-          <img
-            src="/src/assets/favicon-32x32.png"
-            alt="Folkoder Logo"
-            className="h-6 w-6"
-          />
+          
           <button
             className="ml-4 mt-2 md:mt-0 text-xs text-cyan-400 underline hover:text-orange-400 transition"
             onClick={onAdminLoginClick}

@@ -18,108 +18,240 @@ type PlayerProps = {
 const Player: React.FC<PlayerProps> = ({ currentLive }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const reconnectTimer = useRef<number | null>(null);
+  const loadingTimer = useRef<number | null>(null);
+  const stallDetector = useRef<number | null>(null);
+  const reconnectAttempts = useRef(0);
 
   const [playing, setPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.4);
+  const [volume, setVolume] = useState(0.1);
   const [currentTime, setCurrentTime] = useState("00:00");
   const [error, setError] = useState<string | null>(null);
   const [song, setSong] = useState<{ title: string; artist: string; cover: string | null }>({ title: 'Cargando...', artist: '', cover: null });
   const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'stalled' | 'error'>('idle');
+  const [listeners, setListeners] = useState<number | null>(null);
 
-  const play = useCallback(() => {
-    if (!audioRef.current) return;
-
-    setStatus('loading');
-    audioRef.current.src = STREAM_URL;
-    audioRef.current.load();
-    audioRef.current.play()
-      .then(() => {
-        setPlaying(true);
-        setStatus('playing');
-        setError(null);
-      })
-      .catch((err) => {
-        console.error("Error al intentar reproducir:", err);
-        setError("No se pudo iniciar el stream.");
-        setStatus('error');
-        setPlaying(false);
-      });
+  const clearAllTimers = useCallback(() => {
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
+    }
+    if (loadingTimer.current) {
+      clearTimeout(loadingTimer.current);
+      loadingTimer.current = null;
+    }
+    if (stallDetector.current) {
+      clearInterval(stallDetector.current);
+      stallDetector.current = null;
+    }
   }, []);
 
+  // Función principal de reproducción
+  const playStream = useCallback(async () => {
+    if (!audioRef.current) return false;
+
+    try {
+      audioRef.current.src = STREAM_URL + '?t=' + Date.now(); // Cache busting
+      audioRef.current.load();
+      await audioRef.current.play();
+      
+      setPlaying(true);
+      setStatus('playing');
+      setError(null);
+      reconnectAttempts.current = 0;
+      
+      return true;
+    } catch (err) {
+      console.error("Error al reproducir:", err);
+      setPlaying(false);
+      setStatus('error');
+      return false;
+    }
+  }, []);
+
+  // Función de reconexión
+  const attemptReconnect = useCallback(() => {
+    if (status === 'loading') return;
+
+    reconnectAttempts.current++;
+    const maxAttempts = 5;
+    
+    if (reconnectAttempts.current > maxAttempts) {
+      setError("No se pudo conectar después de varios intentos.");
+      setStatus('error');
+      setPlaying(false);
+      clearAllTimers();
+      return;
+    }
+
+    console.log(`Intento de reconexión ${reconnectAttempts.current}/${maxAttempts}`);
+    setStatus('loading');
+    setError(`Reconectando... (${reconnectAttempts.current}/${maxAttempts})`);
+
+    clearAllTimers();
+
+    reconnectTimer.current = window.setTimeout(async () => {
+      if (audioRef.current) {
+        // Forzar reset del audio
+        audioRef.current.src = '';
+        audioRef.current.load();
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const success = await playStream();
+        if (!success) {
+          setTimeout(() => attemptReconnect(), 2000);
+        }
+      }
+    }, 2000 + (reconnectAttempts.current * 1000));
+  }, [status, clearAllTimers, playStream]);
+
+  // Detector de stalls mejorado
+  const startStallDetector = useCallback(() => {
+    if (!audioRef.current) return;
+    
+    const audio = audioRef.current;
+    let lastTime = audio.currentTime;
+    let stallCount = 0;
+    
+    stallDetector.current = window.setInterval(() => {
+      if (audio.paused || !playing || status !== 'playing') return;
+      
+      const currentPosition = audio.currentTime;
+      const readyState = audio.readyState;
+      
+      // Detectar si el audio no avanza y no está buffering adecuadamente
+      if (currentPosition === lastTime && readyState < 3) {
+        stallCount++;
+        console.warn(`Stall detectado ${stallCount}/3 - ReadyState: ${readyState}`);
+        
+        if (stallCount >= 3) {
+          console.warn("Stream bloqueado. Forzando reconexión.");
+          setStatus('stalled');
+          attemptReconnect();
+          return;
+        }
+      } else {
+        stallCount = 0; // Reset si funciona correctamente
+      }
+      
+      lastTime = currentPosition;
+    }, 2000); // Revisar cada 2 segundos
+  }, [playing, status, attemptReconnect]);
+
+  // Función principal de play
+  const play = useCallback(async () => {
+    if (!audioRef.current) return;
+
+    clearAllTimers();
+    setStatus('loading');
+    setError("Conectando...");
+    reconnectAttempts.current = 0;
+
+    // Timeout para la carga
+    loadingTimer.current = window.setTimeout(() => {
+      setError("Timeout al conectar. Reintentando...");
+      attemptReconnect();
+    }, 15000);
+
+    const success = await playStream();
+    
+    if (success) {
+      clearAllTimers();
+      startStallDetector();
+    } else {
+      setError("No se pudo iniciar el stream.");
+      setTimeout(() => attemptReconnect(), 3000);
+    }
+  }, [clearAllTimers, attemptReconnect, playStream, startStallDetector]);
+
   const pause = useCallback(() => {
+    clearAllTimers();
     if (audioRef.current) {
       audioRef.current.pause();
     }
     setPlaying(false);
     setStatus('idle');
-  }, []);
+    setError(null);
+  }, [clearAllTimers]);
 
-  const attemptReconnect = useCallback(() => {
-    if (status === 'loading') return; // Already trying to connect/reconnect
-
-    console.log("Intentando reconectar...");
-    setStatus('loading');
-    setError("Conexión perdida. Reconectando...");
-
-    if (reconnectTimer.current) {
-      clearTimeout(reconnectTimer.current);
-    }
-
-    reconnectTimer.current = window.setTimeout(() => {
-      play();
-    }, 3000);
-  }, [play, status]);
-
+  // Event listeners para el elemento audio
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleStalled = () => {
-      console.warn("Stream stalled. Intentando reconectar...");
-      setStatus('stalled');
-      attemptReconnect(); // <-- SOLUCIÓN: reconectar activamente
-    };
-
     const handleError = (e: Event) => {
       console.error("Error de audio:", e);
-      setStatus('error');
-      attemptReconnect();
+      if (playing) {
+        setStatus('error');
+        attemptReconnect();
+      }
     };
 
-    let stallDetector: number;
+    const handleStalled = () => {
+      console.warn("Event: Stream stalled");
+      if (playing && status === 'playing') {
+        setStatus('stalled');
+        attemptReconnect();
+      }
+    };
 
-    const handlePlay = () => {
-        let lastTime = audio.currentTime;
-        stallDetector = window.setInterval(() => {
-            if (audio.paused) return;
-            if (audio.currentTime === lastTime) {
-                console.warn("Stall detectado (currentTime no avanza). Forzando reconexión.");
-                handleStalled(); // <-- SOLUCIÓN: reconectar activamente
-            }
-            lastTime = audio.currentTime;
-        }, 4000); 
+    const handleWaiting = () => {
+      console.warn("Event: Audio waiting for data");
+      if (playing && status === 'playing') {
+        setStatus('stalled');
+      }
+    };
+
+    const handleCanPlay = () => {
+      console.log("Event: Audio can play");
+      if (status === 'loading' || status === 'stalled') {
+        setStatus('playing');
+        setError(null);
+      }
+    };
+
+    const handlePlaying = () => {
+      console.log("Event: Audio playing");
+      setStatus('playing');
+      setError(null);
+      startStallDetector();
     };
 
     const handlePause = () => {
-        if (stallDetector) clearInterval(stallDetector);
+      console.log("Event: Audio paused");
+      clearAllTimers();
     };
 
-    audio.addEventListener('stalled', handleStalled);
-    audio.addEventListener('error', handleError);
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
+    const handleEnded = () => {
+      console.warn("Event: Audio ended (unexpected for stream)");
+      if (playing) {
+        attemptReconnect();
+      }
+    };
 
+    // Agregar event listeners
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('stalled', handleStalled);
+    audio.addEventListener('waiting', handleWaiting);
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('playing', handlePlaying);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('ended', handleEnded);
 
     return () => {
-      audio.removeEventListener('stalled', handleStalled);
+      // Limpiar event listeners
       audio.removeEventListener('error', handleError);
-      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('stalled', handleStalled);
+      audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('playing', handlePlaying);
       audio.removeEventListener('pause', handlePause);
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      if (stallDetector) clearInterval(stallDetector);
+      audio.removeEventListener('ended', handleEnded);
+      clearAllTimers();
     };
-  }, [attemptReconnect]);
+  }, [playing, status, attemptReconnect, startStallDetector, clearAllTimers]);
 
+  // Fetch metadata
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
@@ -133,21 +265,39 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           cover: np.song?.art || null
         });
       } catch {
-        // Silencio en caso de error para no interrumpir
+        // Silencio en caso de error
       }
     };
+    
     fetchMetadata();
-    // MEJORA: intervalo reducido a 2 segundos
-    const interval = window.setInterval(fetchMetadata, 2000); 
+    const interval = window.setInterval(fetchMetadata, 3000);
     return () => clearInterval(interval);
   }, []);
 
+  // Reloj
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
       setCurrentTime(now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Fetch listeners
+  useEffect(() => {
+    const fetchListeners = async () => {
+      try {
+        const res = await fetch("https://cast4.prosandoval.com/api/nowplaying/9");
+        if (!res.ok) return;
+        const data = await res.json();
+        setListeners(data.listeners?.current ?? null);
+      } catch {
+        setListeners(null);
+      }
+    };
+    fetchListeners();
+    const interval = setInterval(fetchListeners, 5000); // cada 5 segundos
+    return () => clearInterval(interval);
   }, []);
 
   const togglePlay = () => {
@@ -179,7 +329,10 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 to-blue-900/20"></div>
         <div className="relative z-10 mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-cyan-400 text-sm font-mono">FM 91.6</span>
+            <span className="text-cyan-400 text-sm font-mono flex items-center gap-1">
+              <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              Oyentes: {listeners !== null ? listeners : '...'}
+            </span>
             <span className="text-cyan-400 text-sm font-mono">{currentTime}</span>
           </div>
           <div className="flex items-center justify-center gap-4 mb-2 min-h-[56px]">
@@ -216,7 +369,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
             <motion.div
               key={i}
               className="w-2 bg-gradient-to-t from-cyan-600 to-cyan-300 rounded-t"
-              animate={{ height: playing ? [8, 32, 16, 24, 40, 12, 36, 20, 28, 44][i % 10] : 8 }}
+              animate={{ height: playing && status === 'playing' ? [8, 32, 16, 24, 40, 12, 36, 20, 28, 44][i % 10] : 8 }}
               transition={{ repeat: Infinity, duration: 0.8 + (i * 0.1), repeatType: "reverse" }}
             />
           ))}
