@@ -37,6 +37,7 @@ import Header from "./components/Header";
 import ModernPlayer from "./components/ModernPlayer";
 import Footer from "./components/Footer";
 import logo from "./assets/logo-radio.jpg";
+import logoRadiosComBr from "./assets/navbar-logo-radios.com.br.webp";
 import Login from "./components/Login";
 import AdminPanel from "./components/AdminPanel";
 import { FaFacebook, FaTwitch } from "react-icons/fa";
@@ -417,8 +418,7 @@ function App() {
                 whileHover={{ scale: 1.1 }}
                 className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
               >
-                {/* Icono genérico de radio */}
-                <svg width="35" height="35" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-2xl text-green-400"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-8 4"/><circle cx="8.5" cy="16.5" r="1.5"/><path d="M19 17v.01"/></svg>
+                <img src={logoRadiosComBr} alt="radios.com.br" className="w-8 h-8 object-contain" />
               </motion.a>
             </motion.div>
         </div>
