@@ -132,7 +132,10 @@ export default function AdminBannerEditor() {
 
   const handleEdit = (idx: number) => {
     setEditingIndex(idx);
-    setEditBanner({ ...banners[idx] });
+    // Forzar que el id esté presente y limpio
+    const banner = { ...banners[idx] };
+    if (banner.id) banner.id = String(banner.id).trim();
+    setEditBanner(banner);
     setErrorMsg("");
     setSuccessMsg("");
   };
@@ -140,25 +143,55 @@ export default function AdminBannerEditor() {
   const handleSave = async () => {
     setErrorMsg("");
     setSuccessMsg("");
-    if (editingIndex === null || !editBanner.id) return;
+    if (editingIndex === null || !editBanner.id) {
+      setErrorMsg("No se encontró el ID del banner a editar.");
+      console.error("Falta el id del banner en edición", editBanner);
+      return;
+    }
 
     setLoading(true);
-    const { error } = await supabase.from('banners').update({
-      title: editBanner.title,
-      description: editBanner.description,
-      link_url: editBanner.link_url,
-      active: editBanner.active,
-      priority: editBanner.priority,
-    }).eq('id', editBanner.id);
-    setLoading(false);
+    try {
+      // Solo enviar campos válidos y no undefined
+      const updateObj: Partial<Pick<Banner, 'title' | 'description' | 'link_url' | 'active' | 'priority'>> = {};
+      if (typeof editBanner.title === 'string') updateObj.title = editBanner.title;
+      if (typeof editBanner.description === 'string') updateObj.description = editBanner.description;
+      if (typeof editBanner.link_url === 'string') updateObj.link_url = editBanner.link_url;
+      if (typeof editBanner.active === 'boolean') updateObj.active = editBanner.active;
+      if (typeof editBanner.priority === 'number') updateObj.priority = editBanner.priority;
 
-    if (!error) {
-      await fetchBannersFromDB();
-      setEditingIndex(null);
-      setEditBanner({});
-      setSuccessMsg("Banner editado correctamente.");
-    } else {
-      setErrorMsg('Error al editar banner: ' + error.message);
+      // Validar que haya al menos un campo a actualizar
+      if (Object.keys(updateObj).length === 0) {
+        setErrorMsg("No hay cambios para guardar.");
+        setLoading(false);
+        return;
+      }
+
+      const cleanId = typeof editBanner.id === 'string' ? editBanner.id.trim() : editBanner.id;
+      console.log("UpdateObj a enviar:", updateObj, "id:", cleanId);
+      const { error, data } = await supabase
+        .from('banners')
+        .update(updateObj)
+        .eq('id', cleanId)
+        .select();
+      setLoading(false);
+
+      if (!error && data && data.length > 0) {
+        console.log("Update exitoso, data:", data);
+        await fetchBannersFromDB();
+        setEditingIndex(null);
+        setEditBanner({});
+        setSuccessMsg("Banner editado correctamente.");
+      } else if (!error && data && data.length === 0) {
+        setErrorMsg("No se encontró el banner a actualizar. Verifica el ID.");
+        console.error("Update no afectó ningún registro. Data:", data);
+      } else {
+        setErrorMsg('Error al editar banner: ' + (error ? error.message : 'Desconocido'));
+        console.error("Error al editar banner:", error);
+      }
+    } catch (err) {
+      setLoading(false);
+      setErrorMsg('Error inesperado al editar banner: ' + (err instanceof Error ? err.message : String(err)));
+      console.error("Error inesperado al editar banner:", err);
     }
   };
 
@@ -301,6 +334,8 @@ export default function AdminBannerEditor() {
                      <input type="checkbox" className="rounded" checked={!!editBanner.active} onChange={e => setEditBanner({ ...editBanner, active: e.target.checked })} />
                      <label className="text-sm font-medium">Activo</label>
                   </div>
+                  {/* Mostrar el id para depuración */}
+                  <div className="md:col-span-2 text-xs text-cyan-400 mb-2">ID: {editBanner.id}</div>
                   <div className="md:col-span-2 flex justify-end gap-2 mt-2">
                     <button type="submit" className="bg-custom-teal text-white px-3 py-1 rounded flex items-center gap-1 font-semibold hover:bg-custom-orange transition disabled:opacity-60" disabled={loading}><FaSave /> Guardar</button>
                     <button type="button" onClick={() => setEditingIndex(null)} className="bg-slate-600 text-white px-3 py-1 rounded">Cancelar</button>
