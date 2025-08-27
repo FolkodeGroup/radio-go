@@ -1,3 +1,13 @@
+// Utilidad para limpiar y validar el src base64
+function getValidBase64Src(image_type: string, image_data: string): string | null {
+  if (!image_type || !image_data) return null;
+  // Limpiar espacios y caracteres extraños
+  const cleanType = image_type.trim().replace(/[^a-zA-Z0-9/-]+/g, '');
+  const cleanData = image_data.trim().replace(/[^a-zA-Z0-9+/=]+/g, '');
+  if (!cleanType.startsWith('image/')) return null;
+  if (cleanData.length < 20) return null;
+  return `data:${cleanType};base64,${cleanData}`;
+}
 import { useState, useEffect, useRef, type Dispatch, type SetStateAction, type ComponentType } from "react";
 // Loader global con logo
 function GlobalLoader() {
@@ -256,11 +266,27 @@ function App() {
               className="block w-full mx-auto rounded-xl shadow-lg bg-slate-900/80 border border-cyan-700/30 overflow-hidden transition-all duration-500 relative"
               style={{ minHeight: 270, maxWidth: '100%' }}
             >
-              <img
-                src={`data:${banners[currentBanner].image_type};base64,${banners[currentBanner].image_data}`}
-                alt={banners[currentBanner].title}
-                className="w-full h-[270px] object-cover rounded-xl transition-all duration-500"
-              />
+              {(() => {
+                const src = getValidBase64Src(banners[currentBanner].image_type, banners[currentBanner].image_data);
+                if (src) {
+                  return (
+                    <img
+                      src={src}
+                      alt={banners[currentBanner].title}
+                      className="w-full h-[270px] object-cover rounded-xl transition-all duration-500"
+                      onError={e => {
+                        (e.currentTarget as HTMLImageElement).src = '/vite.svg';
+                      }}
+                    />
+                  );
+                } else {
+                  return (
+                    <div className="w-full h-[270px] flex items-center justify-center bg-slate-700 text-slate-400 rounded-xl border border-cyan-700">
+                      Sin imagen
+                    </div>
+                  );
+                }
+              })()}
               <div className="absolute bottom-0 left-0 right-0 px-4 py-2 bg-black bg-opacity-50">
                 <h3 className="text-white font-bold">{banners[currentBanner].title}</h3>
                 {banners[currentBanner].description && (

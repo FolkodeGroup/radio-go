@@ -1,3 +1,13 @@
+// Utilidad para limpiar y validar el src base64
+function getValidBase64Src(image_type: string, image_data: string): string | null {
+  if (!image_type || !image_data) return null;
+  // Limpiar espacios y caracteres extraños
+  const cleanType = image_type.trim().replace(/[^a-zA-Z0-9/-]+/g, '');
+  const cleanData = image_data.trim().replace(/[^a-zA-Z0-9+/=]+/g, '');
+  if (!cleanType.startsWith('image/')) return null;
+  if (cleanData.length < 20) return null;
+  return `data:${cleanType};base64,${cleanData}`;
+}
 import React, { useState, useEffect } from "react";
 import { FaEdit, FaTrash, FaSave, FaPlus } from "react-icons/fa";
 import { supabase } from '../supabaseClient';
@@ -111,9 +121,10 @@ export default function AdminBannerEditor() {
       setDescription('');
       setLinkUrl('');
       setPreview(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error al subir banner:', error);
-      setErrorMsg('Ocurrió un error al subir el banner: ' + error.message);
+      const message = error instanceof Error ? error.message : String(error);
+      setErrorMsg('Ocurrió un error al subir el banner: ' + message);
     } finally {
       setIsUploading(false);
     }
@@ -241,7 +252,27 @@ export default function AdminBannerEditor() {
         {banners.map((b, idx) => (
           <li key={b.id} className="mb-4 bg-slate-800 rounded p-4 flex flex-col gap-3 border border-slate-700">
             <div className="flex items-start gap-4">
-              <img src={`data:${b.image_type};base64,${b.image_data}`} alt={b.title} className="w-40 h-auto object-cover rounded border border-cyan-700" />
+              {(() => {
+                const src = getValidBase64Src(b.image_type, b.image_data);
+                if (src) {
+                  return (
+                    <img
+                      src={src}
+                      alt={b.title}
+                      className="w-40 h-auto object-cover rounded border border-cyan-700"
+                      onError={e => {
+                        (e.currentTarget as HTMLImageElement).src = '/vite.svg';
+                      }}
+                    />
+                  );
+                } else {
+                  return (
+                    <div className="w-40 h-24 flex items-center justify-center bg-slate-700 text-slate-400 rounded border border-cyan-700">
+                      Sin imagen
+                    </div>
+                  );
+                }
+              })()}
               <div className="flex-1">
                 <h5 className="font-bold text-white">{b.title}</h5>
                 <p className="text-sm text-slate-300">{b.description}</p>
