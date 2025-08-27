@@ -39,7 +39,7 @@ import Footer from "./components/Footer";
 import logo from "./assets/logo-radio.jpg";
 import Login from "./components/Login";
 import AdminPanel from "./components/AdminPanel";
-import { FaFacebook, FaTiktok, FaInstagram, FaTwitch} from "react-icons/fa";
+import { FaFacebook, FaTwitch } from "react-icons/fa";
 import { SiTunein } from 'react-icons/si';
 import "./styles.css";
 
@@ -374,31 +374,53 @@ function App() {
             </h2>
             <div className="w-24 h-1 bg-custom-teal mx-auto mb-8"></div>
             <motion.div
-              className="grid grid-cols-1 md:grid-cols-5 gap-8 max-w-3xl mx-auto card-login"
+              className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-3xl mx-auto card-login"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.8 }}
             >
-              {[
-                { icon: FaFacebook, url: "https://www.facebook.com/profile.php?id=61579298256538", color: "text-blue-500" },
-                { icon: FaTiktok, url: "https://www.tiktok.com/@radiogodigital", color: "text-white" },
-                { icon: FaInstagram, url: "https://www.instagram.com/radiogodigital", color: "text-pink-500" },
-                { icon: FaTwitch, url: "https://www.twitch.tv/radiogodigital", color: "text-purple-500" },
-                { icon: SiTunein, url: "https://tunein.com/radio/Radio-Go-s346452", color: "text-white" },
-              ].map((social, index) => (
-                <motion.a
-                  key={index}
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  whileHover={{ scale: 1.1 }}
-                  className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
-                >
-                  <social.icon size={35} className={`text-2xl ${social.color}`} />
-                  <span className={`font-semibold ${social.color}`}></span>
-                </motion.a>
-              ))}
-          </motion.div>
+              {/* Facebook */}
+              <motion.a
+                href="https://www.facebook.com/profile.php?id=61579298256538"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+              >
+                <FaFacebook size={35} className="text-2xl text-blue-500" />
+              </motion.a>
+              {/* Twitch */}
+              <motion.a
+                href="https://www.twitch.tv/radiogodigital"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+              >
+                <FaTwitch size={35} className="text-2xl text-purple-500" />
+              </motion.a>
+              {/* TuneIn */}
+              <motion.a
+                href="https://tunein.com/radio/Radio-Go-s346452"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+              >
+                <SiTunein size={35} className="text-2xl text-white" />
+              </motion.a>
+              {/* radios.com.br */}
+              <motion.a
+                href="https://www.radios.com.br/aovivo/radio-go/272262"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+              >
+                {/* Icono genérico de radio */}
+                <svg width="35" height="35" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-2xl text-green-400"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-8 4"/><circle cx="8.5" cy="16.5" r="1.5"/><path d="M19 17v.01"/></svg>
+              </motion.a>
+            </motion.div>
         </div>
       </section>
       {/* Sobre Nosotros Section */}
