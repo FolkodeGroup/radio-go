@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import logo from '../assets/logo-radio.jpg';
+import banderaArgentina from '../assets/bandera-argentina.png';
 
 const Header: React.FC = () => {
   return (
@@ -11,10 +12,22 @@ const Header: React.FC = () => {
       transition={{ duration: 0.8 }}
     >
       <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-        <a className="flex items-center space-x-2" href="#inicio">
-          <img src={logo} alt="Radio Go Logo" className="h-10 w-auto" />
-          <span className="text-xl font-bold text-white">RADIO<span className="text-custom-orange">GO</span></span>
-        </a>
+        <div className="flex items-center space-x-4">
+          <a className="flex items-center space-x-2" href="#inicio">
+            <img src={logo} alt="Radio Go Logo" className="h-10 w-auto" />
+            <span className="text-xl font-bold text-white">RADIO<span className="text-custom-orange">GO</span></span>
+          </a>
+              {/* Bandera de Argentina flameando, ocupa todo el espacio sobrante */}
+              <div className="flex-1 flex items-center justify-center">
+                <img
+                  src={banderaArgentina}
+                  alt="Argentina"
+                  className="h-10 w-full max-w-xs object-contain select-none m-0"
+                  style={{ background: 'transparent', display: 'block' }}
+                  draggable="false"
+                />
+              </div>
+        </div>
         <nav className="hidden md:flex space-x-8 items-center">
           <a className="text-gray-300 hover:text-custom-orange transition duration-300 font-semibold" href="#inicio">Inicio</a>
           <a className="text-gray-300 hover:text-custom-orange transition duration-300 font-semibold" href="#nosotros">Sobre Nosotros</a>

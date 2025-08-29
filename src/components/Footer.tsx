@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { FaFacebook, FaTiktok, FaInstagram, FaTwitch } from "react-icons/fa";
+import { FaFacebook, FaTiktok, FaInstagram, FaTwitch, FaWhatsapp, FaEnvelope } from "react-icons/fa";
 import { SiTunein } from "react-icons/si";
 
 
@@ -10,10 +10,18 @@ type FooterProps = {
   isAdmin?: boolean;
 };
 
-const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
-  <footer className="bg-slate-900/90 backdrop-blur-lg py-12 mt-20">
-    <div className="container mx-auto px-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => {
+  // Detectar si es móvil
+  const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(window.navigator.userAgent);
+  const phoneNumber = '5491162676918';
+  const whatsappLink = isMobile
+    ? `https://wa.me/${phoneNumber}`
+    : `https://web.whatsapp.com/send?phone=${phoneNumber}`;
+
+  return (
+    <footer className="bg-slate-900/90 backdrop-blur-lg py-12 mt-20">
+      <div className="container mx-auto px-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         {/* Logo y descripción */}
         <div className="md:col-span-2">
           <motion.div
@@ -95,8 +103,25 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
         >
           <h4 className="text-white font-bold mb-4">Contacto</h4>
           <div className="space-y-2 text-slate-300">
-            <p>📧 radiogodigital@gmail.com</p>
-            <p>📞 +54 9 1162676918</p>
+            <a
+              href="mailto:radiogodigital@gmail.com"
+              className="inline-flex items-center gap-2 hover:text-cyan-400 transition-colors"
+              aria-label="Enviar correo"
+              target="_blank"
+            >
+              <FaEnvelope className="text-cyan-400 w-5 h-5" />
+              <span>radiogodigital@gmail.com</span>
+            </a>
+            <a
+              href={whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 hover:text-cyan-400 transition-colors"
+              aria-label="WhatsApp"
+            >
+              <FaWhatsapp className="text-green-500 w-5 h-5" />
+              <span>+54 9 1162676918</span>
+            </a>
           </div>
         </motion.div>
       </div>
@@ -124,6 +149,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => (
       </motion.div>
     </div>
   </footer>
-);
+  );
+};
 
 export default Footer;
