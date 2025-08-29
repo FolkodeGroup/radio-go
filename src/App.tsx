@@ -1,3 +1,13 @@
+// Utilidad para limpiar y validar el src base64
+function getValidBase64Src(image_type: string, image_data: string): string | null {
+  if (!image_type || !image_data) return null;
+  // Limpiar espacios y caracteres extraños
+  const cleanType = image_type.trim().replace(/[^a-zA-Z0-9/-]+/g, '');
+  const cleanData = image_data.trim().replace(/[^a-zA-Z0-9+/=]+/g, '');
+  if (!cleanType.startsWith('image/')) return null;
+  if (cleanData.length < 20) return null;
+  return `data:${cleanType};base64,${cleanData}`;
+}
 import { useState, useEffect, useRef, type Dispatch, type SetStateAction, type ComponentType } from "react";
 // Loader global con logo
 function GlobalLoader() {
@@ -27,9 +37,10 @@ import Header from "./components/Header";
 import ModernPlayer from "./components/ModernPlayer";
 import Footer from "./components/Footer";
 import logo from "./assets/logo-radio.jpg";
+import logoRadiosComBr from "./assets/navbar-logo-radios.com.br.webp";
 import Login from "./components/Login";
 import AdminPanel from "./components/AdminPanel";
-import { FaFacebook, FaTiktok, FaInstagram, FaTwitch} from "react-icons/fa";
+import { FaFacebook, FaTwitch } from "react-icons/fa";
 import { SiTunein } from 'react-icons/si';
 import "./styles.css";
 
@@ -46,9 +57,12 @@ type Program = {
 };
 
 type Banner = {
-  image: string;
-  url: string;
-  alt: string;
+  id: string;
+  title: string;
+  description: string | null;
+  link_url: string | null;
+  image_data: string;
+  image_type: string;
 };
 
 
@@ -68,17 +82,12 @@ function App() {
       // Banners
       const { data: bannersData, error: bannersError } = await supabase
         .from('banners')
-        .select('image_url, link_url, title, active');
+        .select('id, title, description, link_url, image_data, image_type, active')
+        .eq('active', true)
+        .order('priority', { ascending: false });
+
       if (isMounted && !bannersError && bannersData) {
-        setBanners(
-          bannersData
-            .filter((b): b is { image_url: string; link_url: string; title: string; active: boolean } => !!b && b.active)
-            .map((b) => ({
-              image: b.image_url,
-              url: b.link_url,
-              alt: b.title || '',
-            }))
-        );
+        setBanners(bannersData as Banner[]);
       }
       // Programs
       const { data: programsData, error: programsError } = await supabase
@@ -250,20 +259,41 @@ function App() {
             <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
           </button>
           {/* Banner actual */}
-          {banners.length > 0 ? (
+          {banners.length > 0 && banners[currentBanner] ? (
             <a
-              href={banners[currentBanner]?.url}
+              href={banners[currentBanner].link_url || '#'}
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full mx-auto rounded-xl shadow-lg bg-slate-900/80 border border-cyan-700/30 overflow-hidden transition-all duration-500"
+              className="block w-full mx-auto rounded-xl shadow-lg bg-slate-900/80 border border-cyan-700/30 overflow-hidden transition-all duration-500 relative"
               style={{ minHeight: 270, maxWidth: '100%' }}
             >
-              <img
-                src={banners[currentBanner].image}
-                alt={banners[currentBanner].alt}
-                className="w-[100%] h-[270px] object-cover rounded-xl transition-all duration-500"
-                style={{ maxWidth: '100%' }}
-              />
+              {(() => {
+                const src = getValidBase64Src(banners[currentBanner].image_type, banners[currentBanner].image_data);
+                if (src) {
+                  return (
+                    <img
+                      src={src}
+                      alt={banners[currentBanner].title}
+                      className="w-full h-[270px] object-cover rounded-xl transition-all duration-500"
+                      onError={e => {
+                        (e.currentTarget as HTMLImageElement).src = '/vite.svg';
+                      }}
+                    />
+                  );
+                } else {
+                  return (
+                    <div className="w-full h-[270px] flex items-center justify-center bg-slate-700 text-slate-400 rounded-xl border border-cyan-700">
+                      Sin imagen
+                    </div>
+                  );
+                }
+              })()}
+              <div className="absolute bottom-0 left-0 right-0 px-4 py-2 bg-black bg-opacity-50">
+                <h3 className="text-white font-bold">{banners[currentBanner].title}</h3>
+                {banners[currentBanner].description && (
+                  <p className="text-white text-sm">{banners[currentBanner].description}</p>
+                )}
+              </div>
             </a>
           ) : (
             <div className="w-full h-[90px] flex items-center justify-center text-slate-400 bg-slate-900/60 rounded-xl border border-cyan-700/20">
@@ -345,31 +375,52 @@ function App() {
             </h2>
             <div className="w-24 h-1 bg-custom-teal mx-auto mb-8"></div>
             <motion.div
-              className="grid grid-cols-1 md:grid-cols-5 gap-8 max-w-3xl mx-auto card-login"
+              className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-3xl mx-auto card-login"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.8 }}
             >
-              {[
-                { icon: FaFacebook, url: "https://www.facebook.com/profile.php?id=61579298256538", color: "text-blue-500" },
-                { icon: FaTiktok, url: "https://www.tiktok.com/@radiogodigital", color: "text-white" },
-                { icon: FaInstagram, url: "https://www.instagram.com/radiogodigital", color: "text-pink-500" },
-                { icon: FaTwitch, url: "https://www.twitch.tv/radiogodigital", color: "text-purple-500" },
-                { icon: SiTunein, url: "https://tunein.com/radio/Radio-Go-s346452", color: "text-white" },
-              ].map((social, index) => (
-                <motion.a
-                  key={index}
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  whileHover={{ scale: 1.1 }}
-                  className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
-                >
-                  <social.icon size={35} className={`text-2xl ${social.color}`} />
-                  <span className={`font-semibold ${social.color}`}></span>
-                </motion.a>
-              ))}
-          </motion.div>
+              {/* Facebook */}
+              <motion.a
+                href="https://www.facebook.com/profile.php?id=61579298256538"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+              >
+                <FaFacebook size={35} className="text-2xl text-blue-500" />
+              </motion.a>
+              {/* Twitch */}
+              <motion.a
+                href="https://www.twitch.tv/radiogodigital"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+              >
+                <FaTwitch size={35} className="text-2xl text-purple-500" />
+              </motion.a>
+              {/* TuneIn */}
+              <motion.a
+                href="https://tunein.com/radio/Radio-Go-s346452"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+              >
+                <SiTunein size={35} className="text-2xl text-white" />
+              </motion.a>
+              {/* radios.com.br */}
+              <motion.a
+                href="https://www.radios.com.br/aovivo/radio-go/272262"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+              >
+                <img src={logoRadiosComBr} alt="radios.com.br" className="w-8 h-8 object-contain" />
+              </motion.a>
+            </motion.div>
         </div>
       </section>
       {/* Sobre Nosotros Section */}
