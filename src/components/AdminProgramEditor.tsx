@@ -172,9 +172,24 @@ export default function AdminProgramEditor() {
     <div className="p-4 max-w-xl mx-auto">
       <h3 className="text-2xl font-bold text-custom-orange mb-4 text-center">Panel de Programación</h3>
       <ul className="mb-6">
-        {programs.map((p, idx) => (
-          <li key={idx} className="mb-2 bg-slate-800 rounded p-3 flex flex-col gap-2 relative border border-slate-700">
-            {editingIndex === idx ? (
+        {Object.values(
+          programs.reduce((acc, p, idx) => {
+            const key = p.title + '|' + p.description;
+            if (!acc[key]) {
+              acc[key] = {
+                ...p,
+                days: [p.day_of_week],
+                idxs: [idx],
+              };
+            } else {
+              acc[key].days.push(p.day_of_week);
+              acc[key].idxs.push(idx);
+            }
+            return acc;
+          }, {} as Record<string, { id?: string; title: string; start_time: string; end_time: string; image_url: string; live: boolean; description: string; host: string; days: number[]; idxs: number[] }>)
+        ).map((group, groupIdx) => (
+          <li key={groupIdx} className="mb-2 bg-slate-800 rounded p-3 flex flex-col gap-2 relative border border-slate-700">
+            {editingIndex !== null && group.idxs.includes(editingIndex) ? (
               <div className="bg-slate-900 rounded p-4 mt-2 border border-slate-700 shadow-inner">
                 <form className="flex flex-col gap-2 w-full" onSubmit={e => { e.preventDefault(); handleSave(); }}>
                   <input className="rounded px-2 py-1 border border-slate-600" placeholder="Título del programa" value={editProgram.title} onChange={e => setEditProgram({ ...editProgram, title: e.target.value })} />
@@ -184,10 +199,10 @@ export default function AdminProgramEditor() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {[1,2,3,4,5,6,7].map(d => {
-                      const label = ['L','M','X','J','V','S','D'][d-1];
+                      const label = ['LUN','MAR','MIE','JUE','VIE','SAB','DOM'][d-1];
                       const checked = editProgramDays.includes(d);
                       return (
-                        <label key={d} className={`cursor-pointer text-xs px-2 py-1 rounded border ${checked ? 'bg-custom-teal text-white border-custom-teal' : 'bg-slate-700 text-slate-200 border-slate-600'}`}> 
+                        <label key={d} className={`cursor-pointer text-xs px-2 py-1 rounded border ${checked ? 'bg-custom-teal text-white border-custom-teal' : 'bg-slate-700 text-slate-200 border-slate-600'}`}>
                           <input type="checkbox" className="hidden" checked={checked} onChange={() => setEditProgramDays(prev => prev.includes(d) ? prev.filter(x=>x!==d) : [...prev, d].sort((a,b)=>a-b))} />{label}
                         </label>
                       );
@@ -205,17 +220,19 @@ export default function AdminProgramEditor() {
                 </form>
               </div>
             ) : (
-              <div className="flex flex-col md:flex-row md:items-center gap-2">
-                <span className="font-bold text-white truncate">{p.title}</span>
-                <span className="text-cyan-400 font-mono">{p.start_time} - {p.end_time}</span>
-                <span className="text-white text-xs">{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][p.day_of_week-1]}</span>
-                <span className="text-white text-xs truncate">{p.host}</span>
-                <span className="text-slate-300 text-xs truncate">{p.description}</span>
-                {p.image_url && <img src={p.image_url} alt={`Imagen del programa ${p.title}`} className="h-8 w-8 object-cover rounded shadow border border-custom-teal" loading="lazy" />}
-                <span className={`text-xs font-bold ${p.live ? 'text-red-400' : 'text-blue-400'}`}>{p.live ? 'EN VIVO' : 'PRÓXIMO'}</span>
-                <div className="flex flexrow gap-2 mt-2 md:mt-0 justify-center">
-                  <button className="bg-custom-orange text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-500 transition btn-program" onClick={() => handleEdit(idx)}><FaEdit />Editar</button>
-                  <button className="bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-red-800 transition btn-program" onClick={() => handleDelete(idx)}><FaTrash />Eliminar</button>
+              <div className="flex flex-col gap-1 md:gap-2">
+                <span className="font-extrabold text-lg md:text-xl text-custom-orange break-words leading-tight w-full mb-1">{group.title}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-cyan-400 font-mono text-sm md:text-base">{group.start_time} - {group.end_time}</span>
+                  <span className="text-white text-xs md:text-sm font-bold">{group.days.sort((a: number, b: number) => a - b).map((d: number) => ['LUN','MAR','MIE','JUE','VIE','SAB','DOM'][d-1]).join(', ')}</span>
+                  <span className="text-white text-xs md:text-sm truncate max-w-[120px] md:max-w-[200px]">{group.host}</span>
+                  <span className="text-slate-300 text-xs md:text-sm truncate max-w-[160px] md:max-w-[300px]">{group.description}</span>
+                  {group.image_url && <img src={group.image_url} alt={`Imagen del programa ${group.title}`} className="h-8 w-8 object-cover rounded shadow border border-custom-teal" loading="lazy" />}
+                  <span className={`text-xs font-bold ${group.live ? 'text-red-400' : 'text-blue-400'}`}>{group.live ? 'EN VIVO' : 'PRÓXIMO'}</span>
+                </div>
+                <div className="flex flex-row gap-2 mt-2 justify-center md:justify-start">
+                  <button className="bg-custom-orange text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-500 transition btn-program" onClick={() => handleEdit(group.idxs[0])}><FaEdit />Editar</button>
+                  <button className="bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-red-800 transition btn-program" onClick={() => handleDelete(group.idxs[0])}><FaTrash />Eliminar</button>
                 </div>
               </div>
             )}
