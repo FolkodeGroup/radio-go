@@ -3,10 +3,11 @@ import { FaEdit, FaTrash} from "react-icons/fa";
 import { supabase } from '../supabaseClient';
 
 type Program = {
+  id?: string;
   title: string;
   start_time: string;
   end_time: string;
-  day_of_week: number;
+  day_of_week: number; // valor único por fila (se generan varias filas si hay múltiples días)
   image_url: string;
   live: boolean;
   description: string;
@@ -16,6 +17,12 @@ type Program = {
 export default function AdminProgramEditor() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  // Días seleccionados para nuevo programa (multi-selección)
+  const [newProgramDays, setNewProgramDays] = useState<number[]>([1]);
+  // Días seleccionados al editar (multi-selección)
+  const [editProgramDays, setEditProgramDays] = useState<number[]>([1]);
+  // Guardar valores originales para borrado seguro al editar (si cambia título/descripcion)
+  const [originalGroupKeys, setOriginalGroupKeys] = useState<{title: string; description: string} | null>(null);
   const [newProgram, setNewProgram] = useState<Program>({
     title: "",
     start_time: "",
@@ -55,6 +62,7 @@ export default function AdminProgramEditor() {
           image_url: string;
           id: string;
         }) => ({
+          id: p.id,
           title: p.name || '',
           start_time: p.start_time || '',
           end_time: p.end_time || '',
@@ -74,31 +82,52 @@ export default function AdminProgramEditor() {
 
   // Editar
   const handleEdit = (idx: number) => {
+    const prog = programs[idx];
     setEditingIndex(idx);
-    setEditProgram(programs[idx]);
+    setEditProgram(prog);
+    // Agrupar días existentes del mismo programa (título + descripción) para edición múltiple
+    const groupDays = programs
+      .filter(p => p.title === prog.title && p.description === prog.description)
+      .map(p => p.day_of_week)
+      .sort((a,b)=>a-b);
+    setEditProgramDays(groupDays.length ? groupDays : [prog.day_of_week]);
+    setOriginalGroupKeys({ title: prog.title, description: prog.description });
   };
 
   // Guardar edición
   const handleSave = async () => {
-    if (editingIndex !== null) {
-      const oldProgram = programs[editingIndex];
-      const { error } = await supabase.from('programs').update({
+    if (editingIndex !== null && originalGroupKeys) {
+      // Borrar todas las filas del grupo original
+      const { error: delError } = await supabase
+        .from('programs')
+        .delete()
+        .eq('name', originalGroupKeys.title)
+        .eq('description', originalGroupKeys.description);
+      if (delError) {
+        alert('Error al limpiar programas previos: ' + delError.message);
+        return;
+      }
+      // Insertar una fila por cada día seleccionado
+      const rows = editProgramDays.map(day => ({
         name: editProgram.title,
         start_time: editProgram.start_time,
         end_time: editProgram.end_time,
-        day_of_week: editProgram.day_of_week,
+        day_of_week: day,
         image_url: editProgram.image_url,
         description: editProgram.description,
         host: editProgram.host,
-        live: editProgram.live, // Agregar este campo
-      }).eq('name', oldProgram.title).eq('description', oldProgram.description);
-      if (!error) {
-        await fetchProgramsFromDB();
-        setEditingIndex(null);
-        setEditProgram({ title: "", start_time: "", end_time: "", day_of_week: 1, image_url: "", live: false, description: "", host: "" });
-      } else {
-        alert('Error al editar programa: ' + error.message);
+        live: editProgram.live,
+      }));
+      const { error: insError } = await supabase.from('programs').insert(rows);
+      if (insError) {
+        alert('Error al guardar programas: ' + insError.message);
+        return;
       }
+      await fetchProgramsFromDB();
+      setEditingIndex(null);
+      setEditProgram({ title: "", start_time: "", end_time: "", day_of_week: 1, image_url: "", live: false, description: "", host: "" });
+      setEditProgramDays([1]);
+      setOriginalGroupKeys(null);
     }
   };
 
@@ -115,19 +144,25 @@ export default function AdminProgramEditor() {
 
   // Agregar
   const handleAdd = async () => {
-    const { error } = await supabase.from('programs').insert({
+    // Validaciones básicas
+    if (!newProgram.title.trim()) { alert('Título requerido'); return; }
+    if (!newProgram.start_time || !newProgram.end_time) { alert('Horario incompleto'); return; }
+    if (newProgramDays.length === 0) { alert('Selecciona al menos un día'); return; }
+    const rows = newProgramDays.map(day => ({
       name: newProgram.title,
       start_time: newProgram.start_time,
       end_time: newProgram.end_time,
-      day_of_week: newProgram.day_of_week,
+      day_of_week: day,
       image_url: newProgram.image_url,
       description: newProgram.description,
       host: newProgram.host,
-      live: newProgram.live, // Agregar este campo
-    });
+      live: newProgram.live,
+    }));
+    const { error } = await supabase.from('programs').insert(rows);
     if (!error) {
       await fetchProgramsFromDB();
       setNewProgram({ title: "", start_time: "", end_time: "", day_of_week: 1, image_url: "", live: false, description: "", host: "" });
+      setNewProgramDays([1]);
     } else {
       alert('Error al agregar programa: ' + error.message);
     }
@@ -147,9 +182,17 @@ export default function AdminProgramEditor() {
                     <input className="rounded px-2 py-1 border border-slate-600 w-1/2" type="time" placeholder="Inicio" value={editProgram.start_time} onChange={e => setEditProgram({ ...editProgram, start_time: e.target.value })} />
                     <input className="rounded px-2 py-1 border border-slate-600 w-1/2" type="time" placeholder="Fin" value={editProgram.end_time} onChange={e => setEditProgram({ ...editProgram, end_time: e.target.value })} />
                   </div>
-                  <select className="rounded px-2 py-1 border border-slate-600" value={editProgram.day_of_week} onChange={e => setEditProgram({ ...editProgram, day_of_week: Number(e.target.value) })}>
-                    {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][d-1]}</option>)}
-                  </select>
+                  <div className="flex flex-wrap gap-2">
+                    {[1,2,3,4,5,6,7].map(d => {
+                      const label = ['L','M','X','J','V','S','D'][d-1];
+                      const checked = editProgramDays.includes(d);
+                      return (
+                        <label key={d} className={`cursor-pointer text-xs px-2 py-1 rounded border ${checked ? 'bg-custom-teal text-white border-custom-teal' : 'bg-slate-700 text-slate-200 border-slate-600'}`}> 
+                          <input type="checkbox" className="hidden" checked={checked} onChange={() => setEditProgramDays(prev => prev.includes(d) ? prev.filter(x=>x!==d) : [...prev, d].sort((a,b)=>a-b))} />{label}
+                        </label>
+                      );
+                    })}
+                  </div>
                   <input className="rounded px-2 py-1 border border-slate-600" placeholder="Imagen URL" value={editProgram.image_url} onChange={e => setEditProgram({ ...editProgram, image_url: e.target.value })} />
                   <input className="rounded px-2 py-1 border border-slate-600" placeholder="Conductor" value={editProgram.host} onChange={e => setEditProgram({ ...editProgram, host: e.target.value })} />
                   <input className="rounded px-2 py-1 border border-slate-600" placeholder="Descripción" value={editProgram.description} onChange={e => setEditProgram({ ...editProgram, description: e.target.value })} />
@@ -186,9 +229,17 @@ export default function AdminProgramEditor() {
           <input className="rounded px-2 py-1 border border-slate-600 w-1/2" type="time" placeholder="Inicio" value={newProgram.start_time} onChange={e => setNewProgram({ ...newProgram, start_time: e.target.value })} />
           <input className="rounded px-2 py-1 border border-slate-600 w-1/2" type="time" placeholder="Fin" value={newProgram.end_time} onChange={e => setNewProgram({ ...newProgram, end_time: e.target.value })} />
         </div>
-        <select className="rounded px-2 py-1 border border-slate-600" value={newProgram.day_of_week} onChange={e => setNewProgram({ ...newProgram, day_of_week: Number(e.target.value) })}>
-          {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][d-1]}</option>)}
-        </select>
+        <div className="flex flex-wrap gap-2">
+          {[1,2,3,4,5,6,7].map(d => {
+            const label = ['LUN','MAR','MIE','JUE','VIE','SAB','DOM'][d-1];
+            const checked = newProgramDays.includes(d);
+            return (
+              <label key={d} className={`cursor-pointer text-xs px-2 py-1 rounded border ${checked ? 'bg-custom-teal text-white border-custom-teal' : 'bg-slate-700 text-slate-200 border-slate-600'}`}>
+                <input type="checkbox" className="hidden" checked={checked} onChange={() => setNewProgramDays(prev => prev.includes(d) ? prev.filter(x=>x!==d) : [...prev, d].sort((a,b)=>a-b))} />{label}
+            </label>
+            );
+          })}
+        </div>
         <input className="rounded px-2 py-1 border border-slate-600" placeholder="Imagen URL" value={newProgram.image_url} onChange={e => setNewProgram({ ...newProgram, image_url: e.target.value })} />
         <input className="rounded px-2 py-1 border border-slate-600" placeholder="Conductor" value={newProgram.host} onChange={e => setNewProgram({ ...newProgram, host: e.target.value })} />
         <input className="rounded px-2 py-1 border border-slate-600" placeholder="Descripción" value={newProgram.description} onChange={e => setNewProgram({ ...newProgram, description: e.target.value })} />
