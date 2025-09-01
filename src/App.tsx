@@ -10,7 +10,7 @@ function App() {
     <div className="min-h-screen bg-custom-dark">
       <Header />
       {/* Hero Section */}
-      <section id="inicio" className="min-h-screen flex flex-col justify-center items-center px-6 pt-20 bg-custom-dark">
+      <section id="inicio" className="min-h-screen flex flex-col justify-center items-center px-6 pt-20 bg-custom-dark scroll-mt-5">
         <div className="container mx-auto text-center">
           <motion.div
             className="mb-8"
@@ -83,7 +83,7 @@ function App() {
         </div>
       </section>
       {/* Sobre Nosotros Section */}
-      <section className="py-20 bg-custom-dark" id="sobre-nosotros">
+      <section className="py-20 bg-custom-dark scroll-mt-10" id="sobre-nosotros">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Sobre <span className="text-custom-orange">Radio</span>{" "}
@@ -100,7 +100,7 @@ function App() {
         </div>
       </section>
       {/* Nuestra Programación Section */}
-      <section className="py-20 bg-gray-900" id="programacion">
+      <section className="py-20 bg-gray-900 scroll-mt-10" id="programacion">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
             Nuestra <span className="text-custom-teal">Programación</span>
@@ -141,7 +141,7 @@ function App() {
         </div>
       </section>
       <div className="bg-custom-dark">
-        
+
         <Footer />
       </div>
     </div>

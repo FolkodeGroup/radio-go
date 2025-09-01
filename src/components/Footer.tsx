@@ -3,12 +3,12 @@ import { motion } from "framer-motion";
 
 
 const Footer: React.FC = () => (
-  <footer className="bg-slate-900/90 backdrop-blur-lg py-12 mt-20">
+  <footer className="bg-slate-900/90 backdrop-blur-lg py-12 mt-20 scroll-mt-20" id="contacto">
     <div className="container mx-auto px-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         {/* Logo y descripción */}
         <div className="md:col-span-2">
-          <motion.div 
+          <motion.div
             className="text-3xl font-bold text-white mb-4 orbitron"
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -17,7 +17,7 @@ const Footer: React.FC = () => (
           >
             RADIO<span className="text-cyan-400">GO</span>
           </motion.div>
-          <motion.p 
+          <motion.p
             className="text-slate-300 mb-6 max-w-md"
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -26,9 +26,9 @@ const Footer: React.FC = () => (
           >
             Tu estación de radio favorita. Música, entretenimiento y la mejor programación las 24 horas del día.
           </motion.p>
-          
+
           {/* Redes sociales */}
-          <motion.div 
+          <motion.div
             className="flex gap-4"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ const Footer: React.FC = () => (
             ))}
           </motion.div>
         </div>
-        
+
         {/* Enlaces rápidos */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -74,7 +74,7 @@ const Footer: React.FC = () => (
             ))}
           </ul>
         </motion.div>
-        
+
         {/* Contacto */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -91,9 +91,9 @@ const Footer: React.FC = () => (
           </div>
         </motion.div>
       </div>
-      
+
       {/* Línea divisoria y copyright */}
-      <motion.div 
+      <motion.div
         className="border-t border-slate-800 pt-6 text-center"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
