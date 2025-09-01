@@ -316,7 +316,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           </div>
           <div className="flex items-center justify-center gap-4 mb-2 min-h-[56px]">
             {song.cover ? (
-              <img src={song.cover} alt="cover" className="w-14 h-14 rounded shadow border-2 border-custom-orange bg-slate-900 object-cover" />
+              <img src={song.cover} alt={`Portada de la canción ${song.title} de ${song.artist}`} className="w-14 h-14 rounded shadow border-2 border-custom-orange bg-slate-900 object-cover" loading="lazy" />
             ) : (
               <div className="w-14 h-14 flex items-center justify-center rounded bg-slate-800 border-2 border-custom-orange">
                 <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path fill="#F97316" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>

@@ -34,7 +34,8 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 import { motion } from "framer-motion";
 import Header from "./components/Header";
-import ModernPlayer from "./components/ModernPlayer";
+import { Suspense, lazy } from "react";
+const ModernPlayer = lazy(() => import("./components/ModernPlayer"));
 import Footer from "./components/Footer";
 import logo from "./assets/logo-radio.jpg";
 import logoRadiosComBr from "./assets/navbar-logo-radios.com.br.webp";
@@ -230,7 +231,7 @@ function App() {
   if (loading) return <GlobalLoader />;
 
   return (
-    <div className="min-h-screen bg-custom-dark">
+    <main className="min-h-screen bg-custom-dark" id="main-content" tabIndex={-1}>
       {showLogin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
           <div className="relative w-full max-w-md flex flex-col items-center bg-login">
@@ -245,15 +246,15 @@ function App() {
           </div>
         </div>
       )}
-      <Header />
-      {/* Banner Slider Section */}
-      <section className="w-full flex justify-center items-center py-6 bg-gradient-to-r from-cyan-900/40 to-blue-900/40 select-none">
+  <Header />
+  {/* Banner Slider Section */}
+  <section className="w-full flex justify-center items-center py-6 bg-gradient-to-r from-cyan-900/40 to-blue-900/40 select-none" aria-label="Banners principales">
         <div className="w-full relative flex items-center justify-center px-0">
           {/* Flecha izquierda */}
           <button
             className="absolute left-4 z-10 bg-slate-900/70 hover:bg-cyan-700/80 text-white rounded-full p-2 shadow-lg transition-all top-1/2 -translate-y-1/2"
             onClick={() => goToBanner((currentBanner - 1 + banners.length) % banners.length)}
-            aria-label="Anterior"
+            aria-label="Banner anterior"
             style={{ display: banners.length > 1 ? 'block' : 'none' }}
           >
             <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
@@ -304,7 +305,7 @@ function App() {
           <button
             className="absolute right-4 z-10 bg-slate-900/70 hover:bg-cyan-700/80 text-white rounded-full p-2 shadow-lg transition-all top-1/2 -translate-y-1/2"
             onClick={() => goToBanner((currentBanner + 1) % banners.length)}
-            aria-label="Siguiente"
+            aria-label="Banner siguiente"
             style={{ display: banners.length > 1 ? 'block' : 'none' }}
           >
             <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
@@ -323,7 +324,7 @@ function App() {
         </div>
       </section>
       {/* Hero Section */}
-      <section id="inicio" className="min-h-screen flex flex-col justify-center items-center px-6 pt-10 bg-custom-dark">
+  <section id="inicio" className="min-h-screen flex flex-col justify-center items-center px-6 pt-10 bg-custom-dark" aria-label="Inicio">
         <div className="container mx-auto text-center">
           <motion.div
             className="mb-8"
@@ -343,14 +344,15 @@ function App() {
               transition={{ delay: 0.2, duration: 0.8 }}
             />
           </motion.div>
-          <motion.h1
-            className="text-6xl md:text-8xl font-black text-white mb-6 orbitron text-glow"
-            initial={{ y: -50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-          >
-            RADIO<span className="text-custom-orange">GO</span>
-          </motion.h1>
+            <motion.h1
+              className="text-6xl md:text-8xl font-black text-white mb-6 orbitron text-glow"
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              tabIndex={0}
+            >
+              RADIO<span className="text-custom-orange">GO</span>
+            </motion.h1>
           <motion.p
             className="text-xl md:text-2xl text-gray-300 mb-12 max-w-2xl mx-auto"
             initial={{ y: -30, opacity: 0 }}
@@ -365,7 +367,9 @@ function App() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.8 }}
           >
-            <ModernPlayer currentLive={currentLive} />
+            <Suspense fallback={<div className="w-full flex justify-center items-center min-h-[120px]"><span className="text-custom-teal animate-pulse">Cargando reproductor...</span></div>}>
+              <ModernPlayer currentLive={currentLive} />
+            </Suspense>
           </motion.div>
           {/* Redes sociales */}
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -424,7 +428,7 @@ function App() {
         </div>
       </section>
       {/* Sobre Nosotros Section */}
-      <section className="py-20 bg-custom-dark" id="nosotros">
+  <section className="py-20 bg-custom-dark" id="nosotros" aria-label="Sobre Nosotros">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Sobre <span className="text-custom-orange">Radio</span>{" "}
@@ -441,7 +445,7 @@ function App() {
         </div>
       </section>
       {/* Nuestra Programación Section */}
-      <section className="py-20 bg-gray-900" id="programación">
+  <section className="py-20 bg-gray-900" id="programación" aria-label="Nuestra Programación">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
             Nuestra <span className="text-custom-teal">Programación</span>
@@ -471,10 +475,10 @@ function App() {
           </div>
         </div>
       </section>
-      <div className="bg-custom-dark" id="contacto">
+  <footer className="bg-custom-dark" id="contacto" aria-label="Contacto">
         <Footer onAdminLoginClick={() => setShowLogin(true)} isAdmin={isAdmin} />
-      </div>
-    </div>
+      </footer>
+  </main>
   );
 }
 

@@ -14,18 +14,19 @@ const Header: React.FC = () => {
       <div className="container mx-auto px-6 py-4 flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <a className="flex items-center space-x-2" href="#inicio">
-            <img src={logo} alt="Radio Go Logo" className="h-10 w-auto" />
+              <img src={logo} alt="Logo de Radio Go" className="h-10 w-auto" loading="lazy" />
             <span className="text-xl font-bold text-white">RADIO<span className="text-custom-orange">GO</span></span>
           </a>
               {/* Bandera de Argentina flameando, ocupa todo el espacio sobrante */}
               <div className="flex-1 flex items-center justify-center">
-                <img
-                  src={banderaArgentina}
-                  alt="Argentina"
-                  className="h-10 w-full max-w-xs object-contain select-none m-0"
-                  style={{ background: 'transparent', display: 'block' }}
-                  draggable="false"
-                />
+                  <img
+                    src={banderaArgentina}
+                    alt="Bandera de Argentina flameando"
+                    className="h-10 w-full max-w-xs object-contain select-none m-0"
+                    style={{ background: 'transparent', display: 'block' }}
+                    draggable="false"
+                    loading="lazy"
+                  />
               </div>
         </div>
         <nav className="hidden md:flex space-x-8 items-center">

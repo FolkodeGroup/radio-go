@@ -211,7 +211,7 @@ export default function AdminProgramEditor() {
                 <span className="text-white text-xs">{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][p.day_of_week-1]}</span>
                 <span className="text-white text-xs truncate">{p.host}</span>
                 <span className="text-slate-300 text-xs truncate">{p.description}</span>
-                {p.image_url && <img src={p.image_url} alt="img" className="h-8 w-8 object-cover rounded shadow border border-custom-teal" />}
+                {p.image_url && <img src={p.image_url} alt={`Imagen del programa ${p.title}`} className="h-8 w-8 object-cover rounded shadow border border-custom-teal" loading="lazy" />}
                 <span className={`text-xs font-bold ${p.live ? 'text-red-400' : 'text-blue-400'}`}>{p.live ? 'EN VIVO' : 'PRÓXIMO'}</span>
                 <div className="flex flexrow gap-2 mt-2 md:mt-0 justify-center">
                   <button className="bg-custom-orange text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-500 transition btn-program" onClick={() => handleEdit(idx)}><FaEdit />Editar</button>

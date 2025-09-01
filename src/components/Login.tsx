@@ -48,11 +48,12 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       >
         <motion.img
           src={logo}
-          alt="Radio Go Logo"
+          alt="Logo de Radio Go"
           className="w-24 h-24 mx-auto mb-4 rounded-full border-4 border-custom-teal shadow-2xl floating"
           style={{ filter: "drop-shadow(0 0 20px rgba(20, 184, 166, 0.5))" }}
           width={96}
           height={96}
+          loading="lazy"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.8 }}
