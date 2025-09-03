@@ -40,7 +40,7 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => {
             transition={{ duration: 0.8, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            Tu estación de radio favorita. Música, entretenimiento y la mejor programación las 24 horas del día.
+            Tu estación de radio favorita. Música, entretenimiento y la mejor programación las 24 horas.
           </motion.p>
 
           {/* Redes sociales */}
