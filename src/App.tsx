@@ -260,47 +260,50 @@ function App() {
             <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
           </button>
           {/* Banner actual */}
-          {banners.length > 0 && banners[currentBanner] ? (
-            <a
-              href={banners[currentBanner].link_url || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full mx-auto rounded-xl shadow-lg bg-slate-900/80 border border-cyan-700/30 overflow-hidden transition-all duration-500 relative"
-              style={{ minHeight: 270, maxWidth: '100%' }}
-            >
-              {(() => {
-                const src = getValidBase64Src(banners[currentBanner].image_type, banners[currentBanner].image_data);
-                if (src) {
-                  return (
-                    <img
-                      src={src}
-                      alt={banners[currentBanner].title}
-                      className="w-full h-[270px] w-[100%] object-contain object-center rounded-xl transition-all duration-500"
-                      onError={e => {
-                        (e.currentTarget as HTMLImageElement).src = '/vite.svg';
-                      }}
-                    />
-                  );
-                } else {
-                  return (
-                    <div className="w-full h-[270px] flex items-center justify-center bg-slate-700 text-slate-400 rounded-xl border border-cyan-700">
-                      Sin imagen
-                    </div>
-                  );
-                }
-              })()}
-              <div className="absolute bottom-0 left-0 right-0 px-4 py-2 bg-black bg-opacity-50">
-                <h3 className="text-white font-bold">{banners[currentBanner].title}</h3>
-                {banners[currentBanner].description && (
-                  <p className="text-white text-sm">{banners[currentBanner].description}</p>
-                )}
+            {banners.length > 0 && banners[currentBanner] ? (
+              <a
+                href={banners[currentBanner].link_url || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full h-[320px] relative rounded-xl shadow-lg bg-slate-900/80 border border-cyan-700/30 overflow-hidden transition-all duration-500"
+                style={{ height: 320 }}
+              >
+                {/* Imagen de fondo */}
+                {(() => {
+                  const src = getValidBase64Src(banners[currentBanner].image_type, banners[currentBanner].image_data);
+                  if (src) {
+                    return (
+                      <img
+                        src={src}
+                        alt={banners[currentBanner].title}
+                        className="absolute inset-0 w-full h-full object-contain object-center z-0"
+                        style={{ width: '100%', height: '100%' }}
+                        onError={e => {
+                          (e.currentTarget as HTMLImageElement).src = '/vite.svg';
+                        }}
+                      />
+                    );
+                  } else {
+                    return (
+                      <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-slate-700 text-slate-400 z-0">
+                        Sin imagen
+                      </div>
+                    );
+                  }
+                })()}
+                {/* Overlay de texto */}
+                <div className="relative z-10 flex flex-col justify-end h-full w-full px-8 py-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                  <h3 className="text-white font-bold text-2xl md:text-3xl mb-2 drop-shadow-lg truncate" title={banners[currentBanner].title}>{banners[currentBanner].title}</h3>
+                  {banners[currentBanner].description && (
+                    <p className="text-white text-base md:text-lg line-clamp-2 drop-shadow-lg">{banners[currentBanner].description}</p>
+                  )}
+                </div>
+              </a>
+            ) : (
+              <div className="w-full h-[320px] flex items-center justify-center text-slate-400 bg-slate-900/60 rounded-xl border border-cyan-700/20">
+                Sin banners
               </div>
-            </a>
-          ) : (
-            <div className="w-full h-[90px] flex items-center justify-center text-slate-400 bg-slate-900/60 rounded-xl border border-cyan-700/20">
-              Sin banners
-            </div>
-          )}
+            )}
           {/* Flecha derecha */}
           <button
             className="absolute right-4 z-10 bg-slate-900/70 hover:bg-cyan-700/80 text-white rounded-full p-2 shadow-lg transition-all top-1/2 -translate-y-1/2"

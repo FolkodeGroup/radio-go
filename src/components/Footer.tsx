@@ -93,15 +93,6 @@ const Footer: React.FC<FooterProps> = ({ onAdminLoginClick, isAdmin }) => {
               ))}
             </ul>
           </motion.div>
-          <motion.p
-            className="text-slate-300 mb-6 max-w-md"
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-            Tu estación de radio favorita. Música, entretenimiento y la mejor programación las 24 horas.
-          </motion.p>
 
           {/* Contacto */}
           <motion.div
