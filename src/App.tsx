@@ -112,8 +112,8 @@ function App() {
           id: string;
         }) => {
           // Asume formato HH:mm o HH:mm:ss
-          const start = (p.start_time || '').slice(0,5);
-          const end = (p.end_time || '').slice(0,5);
+          const start = (p.start_time || '').slice(0, 5);
+          const end = (p.end_time || '').slice(0, 5);
           const isToday = p.day_of_week === day;
           const isLive = isToday && nowStr >= start && nowStr < end;
           if (isLive) liveFound = {
@@ -246,9 +246,9 @@ function App() {
           </div>
         </div>
       )}
-  <Header />
-  {/* Banner Slider Section */}
-  <section className="w-full flex justify-center items-center py-6 bg-gradient-to-r from-cyan-900/40 to-blue-900/40 select-none" aria-label="Banners principales">
+      <Header />
+      {/* Banner Slider Section */}
+      <section className="w-full flex justify-center items-center py-6 bg-gradient-to-r from-cyan-900/40 to-blue-900/40 select-none" aria-label="Banners principales">
         <div className="w-full relative flex items-center justify-center px-0">
           {/* Flecha izquierda */}
           <button
@@ -257,7 +257,7 @@ function App() {
             aria-label="Banner anterior"
             style={{ display: banners.length > 1 ? 'block' : 'none' }}
           >
-            <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+            <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
           </button>
           {/* Banner actual */}
           {banners.length > 0 && banners[currentBanner] ? (
@@ -275,7 +275,7 @@ function App() {
                     <img
                       src={src}
                       alt={banners[currentBanner].title}
-                      className="w-full h-[270px] object-cover rounded-xl transition-all duration-500"
+                      className="w-full h-[270px] w-[100%] object-contain object-center rounded-xl transition-all duration-500"
                       onError={e => {
                         (e.currentTarget as HTMLImageElement).src = '/vite.svg';
                       }}
@@ -308,7 +308,7 @@ function App() {
             aria-label="Banner siguiente"
             style={{ display: banners.length > 1 ? 'block' : 'none' }}
           >
-            <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+            <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
           </button>
           {/* Indicadores */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
@@ -324,7 +324,7 @@ function App() {
         </div>
       </section>
       {/* Hero Section */}
-  <section id="inicio" className="min-h-screen flex flex-col justify-center items-center px-6 pt-10 bg-custom-dark" aria-label="Inicio">
+      <section id="inicio" className="min-h-screen flex flex-col justify-center items-center px-6 pt-10 bg-custom-dark md:scroll-mt-[-60px] sm:scroll-mt-[30px]" aria-label="Inicio">
         <div className="container mx-auto text-center">
           <motion.div
             className="mb-8"
@@ -344,15 +344,15 @@ function App() {
               transition={{ delay: 0.2, duration: 0.8 }}
             />
           </motion.div>
-            <motion.h1
-              className="text-6xl md:text-8xl font-black text-white mb-6 orbitron text-glow"
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.8 }}
-              tabIndex={0}
-            >
-              RADIO<span className="text-custom-orange">GO</span>
-            </motion.h1>
+          <motion.h1
+            className="text-6xl md:text-8xl font-black text-white mb-6 orbitron text-glow"
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            tabIndex={0}
+          >
+            RADIO<span className="text-custom-orange">GO</span>
+          </motion.h1>
           <motion.p
             className="text-xl md:text-2xl text-gray-300 mb-12 max-w-2xl mx-auto"
             initial={{ y: -30, opacity: 0 }}
@@ -372,63 +372,63 @@ function App() {
             </Suspense>
           </motion.div>
           {/* Redes sociales */}
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              <span> Escuchanos en </span>{" "}
-              <span className="text-custom-orange">Nuestras </span>{" "}
-              <span className="text-custom-teal">Redes</span>
-            </h2>
-            <div className="w-24 h-1 bg-custom-teal mx-auto mb-8"></div>
-            <motion.div
-              className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-3xl mx-auto card-login"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.8 }}
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <span> Escuchanos en </span>{" "}
+            <span className="text-custom-orange">Nuestras </span>{" "}
+            <span className="text-custom-teal">Redes</span>
+          </h2>
+          <div className="w-24 h-1 bg-custom-teal mx-auto mb-8"></div>
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-3xl mx-auto card-login"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.8 }}
+          >
+            {/* Facebook */}
+            <motion.a
+              href="https://www.facebook.com/profile.php?id=61579298256538"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.1 }}
+              className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
             >
-              {/* Facebook */}
-              <motion.a
-                href="https://www.facebook.com/profile.php?id=61579298256538"
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={{ scale: 1.1 }}
-                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
-              >
-                <FaFacebook size={35} className="text-2xl text-blue-500" />
-              </motion.a>
-              {/* Twitch */}
-              <motion.a
-                href="https://www.twitch.tv/radiogodigital"
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={{ scale: 1.1 }}
-                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
-              >
-                <FaTwitch size={35} className="text-2xl text-purple-500" />
-              </motion.a>
-              {/* TuneIn */}
-              <motion.a
-                href="https://tunein.com/radio/Radio-Go-s346452"
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={{ scale: 1.1 }}
-                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
-              >
-                <SiTunein size={35} className="text-2xl text-white" />
-              </motion.a>
-              {/* radios.com.br */}
-              <motion.a
-                href="https://www.radios.com.br/aovivo/radio-go/272262"
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={{ scale: 1.1 }}
-                className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
-              >
-                <img src={logoRadiosComBr} alt="radios.com.br" className="w-8 h-8 object-contain" />
-              </motion.a>
-            </motion.div>
+              <FaFacebook size={35} className="text-2xl text-blue-500" />
+            </motion.a>
+            {/* Twitch */}
+            <motion.a
+              href="https://www.twitch.tv/radiogodigital"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.1 }}
+              className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+            >
+              <FaTwitch size={35} className="text-2xl text-purple-500" />
+            </motion.a>
+            {/* TuneIn */}
+            <motion.a
+              href="https://tunein.com/radio/Radio-Go-s346452"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.1 }}
+              className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+            >
+              <SiTunein size={35} className="text-2xl text-white" />
+            </motion.a>
+            {/* radios.com.br */}
+            <motion.a
+              href="https://www.radios.com.br/aovivo/radio-go/272262"
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.1 }}
+              className="glass rounded-lg px-5 py-3 border border-custom-orange flex items-center hover:bg-[#1e1e1e] transition text-center justify-center"
+            >
+              <img src={logoRadiosComBr} alt="radios.com.br" className="w-8 h-8 object-contain" />
+            </motion.a>
+          </motion.div>
         </div>
       </section>
       {/* Sobre Nosotros Section */}
-  <section className="py-20 bg-custom-dark" id="nosotros" aria-label="Sobre Nosotros">
+      <section className="py-20 bg-custom-dark md:scroll-mt-[300px]" id="nosotros" aria-label="Sobre Nosotros">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Sobre <span className="text-custom-orange">Radio</span>{" "}
@@ -445,7 +445,7 @@ function App() {
         </div>
       </section>
       {/* Nuestra Programación Section */}
-  <section className="py-20 bg-gray-900" id="programación" aria-label="Nuestra Programación">
+      <section className="py-20 bg-gray-900 md:scroll-mt-[40px] sm:scroll-mt-[150px]" id="programación" aria-label="Nuestra Programación">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
             Nuestra <span className="text-custom-teal">Programación</span>
@@ -475,10 +475,10 @@ function App() {
           </div>
         </div>
       </section>
-  <footer className="bg-custom-dark" id="contacto" aria-label="Contacto">
+      <footer className="bg-custom-dark" id="contacto" aria-label="Contacto">
         <Footer onAdminLoginClick={() => setShowLogin(true)} isAdmin={isAdmin} />
       </footer>
-  </main>
+    </main>
   );
 }
 
