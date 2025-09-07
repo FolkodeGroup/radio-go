@@ -359,7 +359,7 @@ function App() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.8 }}
           >
-            La mejor música y entretenimiento las 24 horas del día
+            La mejor música y entretenimiento las 24 horas
           </motion.p>
           <motion.div
             className="mb-8"
