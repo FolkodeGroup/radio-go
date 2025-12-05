@@ -2,9 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 
 const STREAM_URL = import.meta.env.VITE_STREAM_URL || "";
-// TODO: Update METADATA_URL for new provider (server.streamcasthd.com). 
-// Old: https://cast4.prosandoval.com/api/nowplaying/9
-const METADATA_URL = "";
+const METADATA_URL = "/api/metadata";
 
 const bars = Array.from({ length: 20 });
 
@@ -259,11 +257,22 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
         const res = await fetch(METADATA_URL);
         if (!res.ok) return;
         const data = await res.json();
-        const np = data.now_playing || data;
+
+        // Handle new provider format
+        let title = 'Desconocido';
+        let artist = '';
+        const rawTitle = data.title || '';
+
+        if (rawTitle.includes(' - ')) {
+          [artist, title] = rawTitle.split(' - ').map((s: string) => s.trim());
+        } else {
+          title = rawTitle;
+        }
+
         setSong({
-          title: np.song?.title || 'Sin información',
-          artist: np.song?.artist || '',
-          cover: np.song?.art || null
+          title: title || 'Música en vivo',
+          artist: artist,
+          cover: data.art || null
         });
       } catch {
         // Silencio en caso de error
@@ -271,7 +280,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     };
 
     fetchMetadata();
-    const interval = window.setInterval(fetchMetadata, 3000);
+    const interval = window.setInterval(fetchMetadata, 10000);
     return () => clearInterval(interval);
   }, []);
 
