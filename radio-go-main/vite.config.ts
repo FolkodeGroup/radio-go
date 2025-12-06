@@ -20,17 +20,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/stream': {
-        target: 'https://server.streamcasthd.com/8056/stream',
+        target: 'https://cast4.prosandoval.com/listen/radio_go/radio.mp3',
         changeOrigin: true,
         rewrite: () => '',
-        secure: false, // Set to false to avoid SSL issues if certificate chain is incomplete, though URL is https
+        secure: true,
         followRedirects: true
-      },
-      '/api/metadata': {
-        target: 'https://server.streamcasthd.com/cp/get_info.php?p=8056',
-        changeOrigin: true,
-        rewrite: () => '',
-        secure: false
       }
     }
   }
