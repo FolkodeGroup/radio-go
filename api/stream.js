@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   // LA URL PÚBLICA Y CORRECTA DEL STREAM DE AZURACAST
-  const STREAM_URL = 'https://cast4.prosandoval.com/listen/radio_go/radio.mp3';
+  const STREAM_URL = 'https://server.streamcasthd.com/8056/stream';
 
   try {
     const proxyRes = await fetch(STREAM_URL, {
