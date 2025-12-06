@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 
 const STREAM_URL = import.meta.env.VITE_STREAM_URL || "";
-const METADATA_URL = "https://cast4.prosandoval.com/api/nowplaying/9";
+const METADATA_URL = "https://server.streamcasthd.com/cp/get_info.php?p=8056";
 
 const bars = Array.from({ length: 20 });
 
@@ -52,12 +52,12 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       audioRef.current.src = STREAM_URL + '?t=' + Date.now(); // Cache busting
       audioRef.current.load();
       await audioRef.current.play();
-      
+
       setPlaying(true);
       setStatus('playing');
       setError(null);
       reconnectAttempts.current = 0;
-      
+
       return true;
     } catch (err) {
       console.error("Error al reproducir:", err);
@@ -73,7 +73,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
 
     reconnectAttempts.current++;
     const maxAttempts = 5;
-    
+
     if (reconnectAttempts.current > maxAttempts) {
       setError("No se pudo conectar después de varios intentos.");
       setStatus('error');
@@ -93,9 +93,9 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
         // Forzar reset del audio
         audioRef.current.src = '';
         audioRef.current.load();
-        
+
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         const success = await playStream();
         if (!success) {
           setTimeout(() => attemptReconnect(), 2000);
@@ -107,22 +107,22 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
   // Detector de stalls mejorado
   const startStallDetector = useCallback(() => {
     if (!audioRef.current) return;
-    
+
     const audio = audioRef.current;
     let lastTime = audio.currentTime;
     let stallCount = 0;
-    
+
     stallDetector.current = window.setInterval(() => {
       if (audio.paused || !playing || status !== 'playing') return;
-      
+
       const currentPosition = audio.currentTime;
       const readyState = audio.readyState;
-      
+
       // Detectar si el audio no avanza y no está buffering adecuadamente
       if (currentPosition === lastTime && readyState < 3) {
         stallCount++;
         console.warn(`Stall detectado ${stallCount}/3 - ReadyState: ${readyState}`);
-        
+
         if (stallCount >= 3) {
           console.warn("Stream bloqueado. Forzando reconexión.");
           setStatus('stalled');
@@ -132,7 +132,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       } else {
         stallCount = 0; // Reset si funciona correctamente
       }
-      
+
       lastTime = currentPosition;
     }, 2000); // Revisar cada 2 segundos
   }, [playing, status, attemptReconnect]);
@@ -153,7 +153,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     }, 15000);
 
     const success = await playStream();
-    
+
     if (success) {
       clearAllTimers();
       startStallDetector();
@@ -257,19 +257,30 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
         const res = await fetch(METADATA_URL);
         if (!res.ok) return;
         const data = await res.json();
-        const np = data.now_playing || data;
+
+        // Handle new provider format
+        let title = 'Desconocido';
+        let artist = '';
+        const rawTitle = data.title || '';
+
+        if (rawTitle.includes(' - ')) {
+          [artist, title] = rawTitle.split(' - ').map((s: string) => s.trim());
+        } else {
+          title = rawTitle;
+        }
+
         setSong({
-          title: np.song?.title || 'Sin información',
-          artist: np.song?.artist || '',
-          cover: np.song?.art || null
+          title: title || 'Música en vivo',
+          artist: artist,
+          cover: data.art || null
         });
       } catch {
         // Silencio en caso de error
       }
     };
-    
+
     fetchMetadata();
-    const interval = window.setInterval(fetchMetadata, 3000);
+    const interval = window.setInterval(fetchMetadata, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -319,7 +330,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
               <img src={song.cover} alt="cover" className="w-14 h-14 rounded shadow border-2 border-custom-orange bg-slate-900 object-cover" />
             ) : (
               <div className="w-14 h-14 flex items-center justify-center rounded bg-slate-800 border-2 border-custom-orange">
-                <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path fill="#F97316" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path fill="#F97316" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" /></svg>
               </div>
             )}
             <div className="text-left">
@@ -330,7 +341,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           <div className="text-center mt-2 min-h-[60px]">
             <h3 className="text-white text-lg font-bold orbitron">RADIO GO</h3>
             {isReconnecting ? (
-                <p className="text-yellow-400 text-sm animate-pulse">{error}</p>
+              <p className="text-yellow-400 text-sm animate-pulse">{error}</p>
             ) : currentLive ? (
               <>
                 <p className="text-custom-orange text-base font-bold animate-pulse">EN VIVO: {currentLive.title}</p>
@@ -370,7 +381,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
         </motion.button>
       </div>
       <div className="flex items-center gap-4 bg-slate-800/50 rounded-lg p-4">
-        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="text-cyan-400"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="text-cyan-400"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" /></svg>
         <input type="range" min={0} max={1} step={0.01} value={volume} onChange={handleVolume} className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider" />
         <span className="text-cyan-400 text-sm font-mono w-12">{Math.round(volume * 100)}%</span>
       </div>

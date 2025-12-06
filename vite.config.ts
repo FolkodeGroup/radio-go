@@ -5,14 +5,6 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      '/api/stream': {
-        target: 'https://cast4.prosandoval.com/listen/radio_go/radio.mp3',
-        changeOrigin: true,
-        rewrite: () => '',
-        secure: true,
-        followRedirects: true
-      }
-    }
+    // Proxy removido: Usamos URLs directas que soportan CORS o no lo requieren (audio)
   }
 })
