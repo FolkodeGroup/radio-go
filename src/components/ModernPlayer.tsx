@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import RadioWorker from "../workers/radio.worker?worker";
 
 const STREAM_URL = import.meta.env.VITE_STREAM_URL || "";
 const METADATA_URL = "/api/metadata";
@@ -16,211 +17,173 @@ type PlayerProps = {
 };
 
 const Player: React.FC<PlayerProps> = ({ currentLive }) => {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const reconnectTimer = useRef<number | null>(null);
-  const loadingTimer = useRef<number | null>(null);
-  const stallDetector = useRef<number | null>(null);
-  const reconnectAttempts = useRef(0);
+  // --- DUAL ENGINE: Motores A y B ---
+  const engineARef = useRef<HTMLAudioElement>(null);
+  const engineBRef = useRef<HTMLAudioElement>(null);
+
+  const workerRef = useRef<Worker | null>(null);
+
+  // Estado para controlar qué motor es el que "suena" (el activo)
+  const [activeEngine, setActiveEngine] = useState<'A' | 'B'>('A');
+
+  // Temporizador para el relevo
+  const timeSinceLastSwitch = useRef(0);
+  const isSwitchingRef = useRef(false);
 
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.1);
   const [currentTime, setCurrentTime] = useState("00:00");
   const [error, setError] = useState<string | null>(null);
   const [song, setSong] = useState<{ title: string; artist: string; cover: string | null }>({ title: 'Cargando...', artist: '', cover: null });
-  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'stalled' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
 
-  const clearAllTimers = useCallback(() => {
-    if (reconnectTimer.current) {
-      clearTimeout(reconnectTimer.current);
-      reconnectTimer.current = null;
-    }
-    if (loadingTimer.current) {
-      clearTimeout(loadingTimer.current);
-      loadingTimer.current = null;
-    }
-    if (stallDetector.current) {
-      clearInterval(stallDetector.current);
-      stallDetector.current = null;
-    }
-  }, []);
+  // Helpers
+  const getActiveAudio = () => (activeEngine === 'A' ? engineARef.current : engineBRef.current);
+  // El "Next" es al que vamos a saltar
+  const getNextAudio = () => (activeEngine === 'A' ? engineBRef.current : engineARef.current);
 
-  // Función principal de reproducción
-  const playStream = useCallback(async () => {
-    if (!audioRef.current) return false;
+  // --- WORKER & HANDOFF LOGIC ---
+  useEffect(() => {
+    workerRef.current = new RadioWorker();
 
-    try {
-      // Usamos timestamp para romper caché y asegurar conexión nueva
-      audioRef.current.src = STREAM_URL + '?t=' + Date.now();
-      audioRef.current.load();
-      await audioRef.current.play();
+    workerRef.current.onmessage = (e) => {
+      if (e.data.type === 'tick') {
+        const now = new Date();
+        setCurrentTime(now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
 
-      setPlaying(true);
-      setStatus('playing');
-      setError(null);
-      reconnectAttempts.current = 0;
-
-      return true;
-    } catch (err) {
-      console.error("Error al reproducir:", err);
-      setPlaying(false);
-      setStatus('error');
-      return false;
-    }
-  }, []);
-
-  // Función de reconexión estándar
-  const attemptReconnect = useCallback(() => {
-    if (status === 'loading') return;
-
-    reconnectAttempts.current++;
-    const maxAttempts = 10; // Aumentamos intentos
-
-    if (reconnectAttempts.current > maxAttempts) {
-      setError("Fallo de conexión. Reintentando en 10s...");
-      setStatus('error');
-      setPlaying(false);
-      // Reintento infinito pero lento
-      setTimeout(() => {
-        reconnectAttempts.current = 0;
-        attemptReconnect();
-      }, 10000);
-      return;
-    }
-
-    console.log(`Intento de reconexión ${reconnectAttempts.current}/${maxAttempts}`);
-    setStatus('loading');
-    setError(`Reconectando... (${reconnectAttempts.current})`);
-
-    clearAllTimers();
-
-    reconnectTimer.current = window.setTimeout(async () => {
-      await playStream();
-    }, 2000);
-  }, [status, clearAllTimers, playStream]);
-
-  // Detector de stalls robusto (Fix para el corte de los 5 minutos)
-  const startStallDetector = useCallback(() => {
-    if (!audioRef.current) return;
-
-    // Limpiar intervalo previo
-    if (stallDetector.current) clearInterval(stallDetector.current);
-
-    let lastTime = 0;
-    let stallCount = 0;
-
-    stallDetector.current = window.setInterval(() => {
-      const audio = audioRef.current;
-      if (!audio || audio.paused || !playing || status !== 'playing') {
-        stallCount = 0;
-        return;
-      }
-
-      const currentPosition = audio.currentTime;
-
-      // Si el tiempo no ha variado en lo absoluto en 2 segundos...
-      if (Math.abs(currentPosition - lastTime) < 0.1) {
-        stallCount++;
-        console.warn(`[Stall] Detectado ${stallCount}/5`);
-
-        // Si llevamos 10 segundos así (5 checks * 2000ms), es un corte real
-        if (stallCount >= 5) {
-          console.warn("[Stall] Stream muerto confirmando. Reconectando...");
-          setStatus('stalled');
-          attemptReconnect();
-          stallCount = 0;
+        // Solo contamos tiempo si estamos reproduciendo
+        if (playing && status === 'playing') {
+          timeSinceLastSwitch.current += 10; // El worker es de 10s
         }
-      } else {
-        stallCount = 0; // Todo ok
+
+        // --- LÓGICA DE RELEVO INFINITO ---
+        // A los 290 segundos (4m 50s), iniciamos el motor secundario.
+        if (playing && !isSwitchingRef.current && timeSinceLastSwitch.current >= 290) {
+          console.log("⚠️ [Relay] 4m 50s alcanzados. Iniciando relevo preventivo...");
+          performHandoff();
+        }
       }
+    };
 
-      lastTime = currentPosition;
-    }, 2000); // Chequeo cada 2 segundos
-  }, [playing, status, attemptReconnect]);
+    return () => workerRef.current?.terminate();
+  }, [playing, status]); // Re-bind si el estado cambia relevante
 
-  const play = useCallback(async () => {
-    if (!audioRef.current) return;
-    clearAllTimers();
+
+  const performHandoff = useCallback(() => {
+    if (isSwitchingRef.current) return;
+    isSwitchingRef.current = true;
+
+    const nextAudio = getNextAudio();
+    if (!nextAudio) return;
+
+    console.log(`🔄 [Relay] Calentando Motor ${activeEngine === 'A' ? 'B' : 'A'}...`);
+
+    // 1. Preparamos el siguiente motor (Muted para que no suene doble aún)
+    nextAudio.volume = 0;
+    // Timestamp para evitar caché y forzar conexión nueva fresca
+    nextAudio.src = STREAM_URL + '?t=' + Date.now();
+    nextAudio.load();
+
+    // 2. Le damos play
+    nextAudio.play()
+      .then(() => {
+        console.log("✅ [Relay] Motor secundario rodando. Ejecutando SWAP...");
+        // Pequeña espera de seguridad para buffer (500ms)
+        setTimeout(() => finalizeSwitch(), 500);
+      })
+      .catch(err => {
+        console.error("❌ [Relay] Falló el arranque del motor secundario:", err);
+        // Si falla, reseteamos el semáforo para reintentar en el siguiente tick
+        isSwitchingRef.current = false;
+      });
+  }, [activeEngine]);
+
+  const finalizeSwitch = () => {
+    const currentAudio = getActiveAudio();
+    const nextAudio = getNextAudio();
+
+    // CAMBIO DE MANDO
+    setActiveEngine(prev => prev === 'A' ? 'B' : 'A');
+    timeSinceLastSwitch.current = 0; // Reset del contador de vida
+
+    // Aplicar volumen al nuevo y matar al viejo
+    if (nextAudio) nextAudio.volume = volume;
+
+    if (currentAudio) {
+      // Fade out rápido o corte
+      currentAudio.pause();
+      currentAudio.src = ""; // Liberar conexión vieja
+      currentAudio.volume = 0;
+    }
+
+    console.log("✨ [Relay] Relevo completado exitosamente. Conexión renovada.");
+    isSwitchingRef.current = false;
+  };
+
+  // --- CONTROLES PÚBLICOS ---
+
+  const initialPlay = async () => {
+    const audio = getActiveAudio();
+    if (!audio) return;
+
     setStatus('loading');
     setError("Conectando...");
 
-    const success = await playStream();
-    if (success) {
-      startStallDetector();
-    } else {
-      setTimeout(() => attemptReconnect(), 1000);
-    }
-  }, [clearAllTimers, attemptReconnect, playStream, startStallDetector]);
-
-  const pause = useCallback(() => {
-    clearAllTimers();
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = ""; // Liberar conexión
-    }
-    setPlaying(false);
-    setStatus('idle');
-    setError(null);
-  }, [clearAllTimers]);
-
-  const togglePlay = () => {
-    if (playing) pause();
-    else play();
-  };
-
-  // Event Listeners Básicos
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleEnded = () => {
-      console.warn("Event: Ended. Reconectando...");
-      if (playing) attemptReconnect();
-    };
-
-    const handleError = (e: Event) => {
-      console.error("Event: Error", e);
-      if (playing) attemptReconnect();
-    };
-
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError);
-
-    // Auto-recovery si entra en playing
-    const handlePlaying = () => {
+    try {
+      audio.src = STREAM_URL + '?t=' + Date.now();
+      await audio.play();
+      setPlaying(true);
       setStatus('playing');
       setError(null);
-      startStallDetector();
-    };
-    audio.addEventListener('playing', handlePlaying);
+      timeSinceLastSwitch.current = 0;
+    } catch (err) {
+      console.error("Error start:", err);
+      setStatus('error');
+      setError("Error de conexión");
+    }
+  };
 
-    return () => {
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError);
-      audio.removeEventListener('playing', handlePlaying);
-      clearAllTimers();
-    };
-  }, [playing, status, attemptReconnect, startStallDetector, clearAllTimers]);
+  const manualStop = () => {
+    const current = getActiveAudio();
+    const next = getNextAudio();
 
-  // Fetch metadata
+    // Apagar todo
+    if (current) { current.pause(); current.src = ""; }
+    if (next) { next.pause(); next.src = ""; }
+
+    setPlaying(false);
+    setStatus('idle');
+    timeSinceLastSwitch.current = 0;
+    isSwitchingRef.current = false;
+  };
+
+  const togglePlay = () => {
+    if (playing) manualStop();
+    else initialPlay();
+  };
+
+  // Manejo de Volumen (aplica al motor activo actual)
+  const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = Number(e.target.value);
+    setVolume(newVolume);
+    const current = getActiveAudio();
+    if (current) current.volume = newVolume;
+  };
+
+  // --- Metadata & UI Standard ---
+  // (Sin cambios lógicos aquí, solo UI)
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
         const res = await fetch(METADATA_URL);
         if (!res.ok) return;
         const data = await res.json();
-        let title = 'Desconocido';
-        let artist = '';
+        let title = 'Desconocido', artist = '';
         const rawTitle = data.title || '';
         if (rawTitle.includes(' - ')) {
           [artist, title] = rawTitle.split(' - ').map((s: string) => s.trim());
-        } else {
-          title = rawTitle;
-        }
-        setSong({
-          title: title || 'Música en vivo',
-          artist: artist,
-          cover: data.art || null
-        });
+        } else { title = rawTitle; }
+        setSong({ title: title || 'Música en vivo', artist, cover: data.art || null });
       } catch { }
     };
     fetchMetadata();
@@ -228,22 +191,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Reloj
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = Number(e.target.value);
-    setVolume(newVolume);
-    if (audioRef.current) audioRef.current.volume = newVolume;
-  };
-
-  const isReconnecting = status === 'loading' || status === 'stalled';
+  const isReconnecting = status === 'loading'; // Simplificado para esta versión
 
   return (
     <motion.div
@@ -252,7 +200,9 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 1 }}
     >
-      <audio ref={audioRef} preload="none" crossOrigin="anonymous" />
+      {/* --- MOTORES INVISIBLES --- */}
+      <audio ref={engineARef} preload="none" crossOrigin="anonymous" className="hidden" />
+      <audio ref={engineBRef} preload="none" crossOrigin="anonymous" className="hidden" />
 
       <div className="bg-black rounded-xl p-6 mb-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 to-blue-900/20"></div>
@@ -276,7 +226,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           <div className="text-center mt-2 min-h-[60px]">
             <h3 className="text-white text-lg font-bold orbitron">RADIO GO</h3>
             {isReconnecting ? (
-              <p className="text-yellow-400 text-sm animate-pulse">{error}</p>
+              <p className="text-yellow-400 text-sm animate-pulse">{error || 'Conectando...'}</p>
             ) : currentLive ? (
               <>
                 <p className="text-custom-orange text-base font-bold animate-pulse">EN VIVO: {currentLive.title}</p>
@@ -285,6 +235,8 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
             ) : (
               <p className="text-cyan-300 text-sm">Música en vivo</p>
             )}
+            {/* Indicador de debugging discreto (opcional) */}
+            {/* <div className="hidden">{activeEngine} | {timeSinceLastSwitch.current}</div> */}
           </div>
         </div>
         <div className="flex items-end justify-center gap-1 h-16 mb-4">
@@ -304,7 +256,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 rounded-full flex items-center justify-center text-white shadow-lg transition-all pulse-glow disabled:opacity-50 disabled:cursor-not-allowed"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          disabled={isReconnecting}
+          disabled={status === 'loading'}
         >
           {playing ? (
             <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
