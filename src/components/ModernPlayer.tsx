@@ -17,189 +17,189 @@ type PlayerProps = {
 
 const Player: React.FC<PlayerProps> = ({ currentLive }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const watchdogRef = useRef<number | null>(null);
+  const reconnectTimer = useRef<number | null>(null);
+  const loadingTimer = useRef<number | null>(null);
+  const stallDetector = useRef<number | null>(null);
+  const reconnectAttempts = useRef(0);
 
-  // Estado que controla si el usuario DECIDIÓ pausar.
-  // Si esto es false, el audio DEBE estar sonando. SIEMPRE.
-  const [manualPause, setManualPause] = useState(true);
-
-  const [playing, setPlaying] = useState(false); // Estado visual (¿suena o no?)
+  const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.1);
   const [currentTime, setCurrentTime] = useState("00:00");
   const [error, setError] = useState<string | null>(null);
   const [song, setSong] = useState<{ title: string; artist: string; cover: string | null }>({ title: 'Cargando...', artist: '', cover: null });
-  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'stalled' | 'error'>('idle');
 
-  // Función NUCLEAR de reconexión: Destruye y reconstruye
-  const forceReconnect = useCallback(() => {
-    if (!audioRef.current || manualPause) return;
+  const clearAllTimers = useCallback(() => {
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
+    }
+    if (loadingTimer.current) {
+      clearTimeout(loadingTimer.current);
+      loadingTimer.current = null;
+    }
+    if (stallDetector.current) {
+      clearInterval(stallDetector.current);
+      stallDetector.current = null;
+    }
+  }, []);
 
-    console.warn("🔄 [Player] Forzando reconexión limpia...");
-    setStatus('loading');
-    setError("Reconectando señal...");
-    setPlaying(false);
+  // Función principal de reproducción
+  const playStream = useCallback(async () => {
+    if (!audioRef.current) return false;
 
     try {
-      const audio = audioRef.current;
-      audio.pause();
-      audio.src = ""; // Limpieza total
-      audio.load();
+      // Usamos timestamp para romper caché y asegurar conexión nueva
+      audioRef.current.src = STREAM_URL + '?t=' + Date.now();
+      audioRef.current.load();
+      await audioRef.current.play();
 
-      // Breve pausa para asegurar que el navegador limpie el buffer
-      setTimeout(() => {
-        if (manualPause) return; // Chequeo de seguridad por si el usuario pausó en el intermedio
-        console.log("▶️ [Player] Iniciando nueva conexión...");
-        audio.src = STREAM_URL + '?t=' + Date.now(); // Cache buster nuevo
-        audio.load();
-        const playPromise = audio.play();
+      setPlaying(true);
+      setStatus('playing');
+      setError(null);
+      reconnectAttempts.current = 0;
 
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("✅ [Player] Reconexión exitosa");
-              setStatus('playing');
-              setPlaying(true);
-              setError(null);
-            })
-            .catch(err => {
-              console.error("❌ [Player] Falló play() en reconexión:", err);
-              // Si falla, reintentamos en 2 segundos recursivamente
-              if (!manualPause) {
-                setTimeout(forceReconnect, 2000);
-              }
-            });
-        }
-      }, 500);
-    } catch (e) {
-      console.error("❌ [Player] Error crítico en forceReconnect:", e);
+      return true;
+    } catch (err) {
+      console.error("Error al reproducir:", err);
+      setPlaying(false);
+      setStatus('error');
+      return false;
     }
-  }, [manualPause]);
+  }, []);
 
-  // Watchdog: El perro guardián que vigila el silencio
-  useEffect(() => {
-    if (manualPause) {
-      if (watchdogRef.current) clearInterval(watchdogRef.current);
+  // Función de reconexión estándar
+  const attemptReconnect = useCallback(() => {
+    if (status === 'loading') return;
+
+    reconnectAttempts.current++;
+    const maxAttempts = 10; // Aumentamos intentos
+
+    if (reconnectAttempts.current > maxAttempts) {
+      setError("Fallo de conexión. Reintentando en 10s...");
+      setStatus('error');
+      setPlaying(false);
+      // Reintento infinito pero lento
+      setTimeout(() => {
+        reconnectAttempts.current = 0;
+        attemptReconnect();
+      }, 10000);
       return;
     }
 
+    console.log(`Intento de reconexión ${reconnectAttempts.current}/${maxAttempts}`);
+    setStatus('loading');
+    setError(`Reconectando... (${reconnectAttempts.current})`);
+
+    clearAllTimers();
+
+    reconnectTimer.current = window.setTimeout(async () => {
+      await playStream();
+    }, 2000);
+  }, [status, clearAllTimers, playStream]);
+
+  // Detector de stalls robusto (Fix para el corte de los 5 minutos)
+  const startStallDetector = useCallback(() => {
+    if (!audioRef.current) return;
+
+    // Limpiar intervalo previo
+    if (stallDetector.current) clearInterval(stallDetector.current);
+
     let lastTime = 0;
-    let stuckCount = 0;
+    let stallCount = 0;
 
-    console.log("👀 [Watchdog] Iniciando vigilancia...");
-    watchdogRef.current = window.setInterval(() => {
-      if (!audioRef.current || manualPause) return;
-
+    stallDetector.current = window.setInterval(() => {
       const audio = audioRef.current;
-      const nowTime = audio.currentTime;
+      if (!audio || audio.paused || !playing || status !== 'playing') {
+        stallCount = 0;
+        return;
+      }
 
-      // Si el tiempo no avanza...
-      if (Math.abs(nowTime - lastTime) < 0.1) {
-        stuckCount++;
-        console.warn(`⚠️ [Watchdog] Audio estancado (${stuckCount}/3)`);
+      const currentPosition = audio.currentTime;
 
-        // Si estancado por 3 checks (3 segundos) -> REINICIAR
-        if (stuckCount >= 3) {
-          console.error("🚨 [Watchdog] DETECTADO CORTE: Reiniciando ahora.");
-          forceReconnect();
-          stuckCount = 0;
+      // Si el tiempo no ha variado en lo absoluto en 2 segundos...
+      if (Math.abs(currentPosition - lastTime) < 0.1) {
+        stallCount++;
+        console.warn(`[Stall] Detectado ${stallCount}/5`);
+
+        // Si llevamos 10 segundos así (5 checks * 2000ms), es un corte real
+        if (stallCount >= 5) {
+          console.warn("[Stall] Stream muerto confirmando. Reconectando...");
+          setStatus('stalled');
+          attemptReconnect();
+          stallCount = 0;
         }
       } else {
-        stuckCount = 0; // Todo bien, reseteamos contador
-        if (status !== 'playing') {
-          setStatus('playing'); // Recuperación visual automática
-          setPlaying(true);
-          setError(null);
-        }
-      }
-      lastTime = nowTime;
-
-      // Doble chequeo: Si el audio dice que está pausado pero manualPause es false -> PLAY
-      if (audio.paused && !manualPause && stuckCount === 0) {
-        console.warn("⚠️ [Watchdog] Audio pausado sin permiso. Dando Play...");
-        audio.play().catch(() => { });
+        stallCount = 0; // Todo ok
       }
 
-    }, 1000); // Check cada 1 segundo
+      lastTime = currentPosition;
+    }, 2000); // Chequeo cada 2 segundos
+  }, [playing, status, attemptReconnect]);
 
-    return () => {
-      if (watchdogRef.current) clearInterval(watchdogRef.current);
-    };
-  }, [manualPause, forceReconnect, status]);
+  const play = useCallback(async () => {
+    if (!audioRef.current) return;
+    clearAllTimers();
+    setStatus('loading');
+    setError("Conectando...");
 
-
-  // Controles de Usuario
-  const togglePlay = useCallback(() => {
-    if (manualPause) {
-      // Usuario quiere PLAY
-      setManualPause(false);
-      // Damos un empujón inicial
-      setTimeout(() => forceReconnect(), 10);
+    const success = await playStream();
+    if (success) {
+      startStallDetector();
     } else {
-      // Usuario quiere PAUSE
-      setManualPause(true);
-      setStatus('idle');
-      setPlaying(false);
-      setError(null);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = ""; // Liberar conexión
-      }
+      setTimeout(() => attemptReconnect(), 1000);
     }
-  }, [manualPause, forceReconnect]);
+  }, [clearAllTimers, attemptReconnect, playStream, startStallDetector]);
 
-  // Event Listeners Nativos (Como backup y triggers rápidos)
+  const pause = useCallback(() => {
+    clearAllTimers();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = ""; // Liberar conexión
+    }
+    setPlaying(false);
+    setStatus('idle');
+    setError(null);
+  }, [clearAllTimers]);
+
+  const togglePlay = () => {
+    if (playing) pause();
+    else play();
+  };
+
+  // Event Listeners Básicos
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleEvent = (e: Event) => {
-      if (manualPause) return;
-
-      switch (e.type) {
-        case 'ended':
-        case 'error':
-          console.warn(`⚡ [Event] ${e.type} detectado. Reconectando...`);
-          forceReconnect(); // Reacción inmediata sin esperar al watchdog
-          break;
-        case 'waiting':
-        case 'stalled':
-          setStatus('loading');
-          break;
-        case 'playing':
-          setStatus('playing');
-          setPlaying(true);
-          setError(null);
-          break;
-      }
+    const handleEnded = () => {
+      console.warn("Event: Ended. Reconectando...");
+      if (playing) attemptReconnect();
     };
 
-    const loadStart = () => { if (!manualPause) setStatus('loading'); };
+    const handleError = (e: Event) => {
+      console.error("Event: Error", e);
+      if (playing) attemptReconnect();
+    };
 
-    audio.addEventListener('ended', handleEvent);
-    audio.addEventListener('error', handleEvent);
-    audio.addEventListener('waiting', handleEvent);
-    audio.addEventListener('stalled', handleEvent);
-    audio.addEventListener('playing', handleEvent);
-    audio.addEventListener('loadstart', loadStart);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+
+    // Auto-recovery si entra en playing
+    const handlePlaying = () => {
+      setStatus('playing');
+      setError(null);
+      startStallDetector();
+    };
+    audio.addEventListener('playing', handlePlaying);
 
     return () => {
-      audio.removeEventListener('ended', handleEvent);
-      audio.removeEventListener('error', handleEvent);
-      audio.removeEventListener('waiting', handleEvent);
-      audio.removeEventListener('stalled', handleEvent);
-      audio.removeEventListener('playing', handleEvent);
-      audio.removeEventListener('loadstart', loadStart);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('playing', handlePlaying);
+      clearAllTimers();
     };
-  }, [manualPause, forceReconnect]);
-
-  // Manejo de Volumen
-  const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = Number(e.target.value);
-    setVolume(newVolume);
-    if (audioRef.current) audioRef.current.volume = newVolume;
-  };
-
-  // --- Efectos Visuales y Metadata (Sin cambios lógicos grandes) ---
+  }, [playing, status, attemptReconnect, startStallDetector, clearAllTimers]);
 
   // Fetch metadata
   useEffect(() => {
@@ -237,6 +237,13 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     return () => clearInterval(timer);
   }, []);
 
+  const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = Number(e.target.value);
+    setVolume(newVolume);
+    if (audioRef.current) audioRef.current.volume = newVolume;
+  };
+
+  const isReconnecting = status === 'loading' || status === 'stalled';
 
   return (
     <motion.div
@@ -255,7 +262,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           </div>
           <div className="flex items-center justify-center gap-4 mb-2 min-h-[56px]">
             {song.cover ? (
-              <img src={song.cover} alt={`Portada de la canción ${song.title} de ${song.artist}`} className="w-14 h-14 rounded shadow border-2 border-custom-orange bg-slate-900 object-cover" loading="lazy" />
+              <img src={song.cover} alt={`Portada: ${song.title}`} className="w-14 h-14 rounded shadow border-2 border-custom-orange bg-slate-900 object-cover" loading="lazy" />
             ) : (
               <div className="w-14 h-14 flex items-center justify-center rounded bg-slate-800 border-2 border-custom-orange">
                 <svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path fill="#F97316" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" /></svg>
@@ -268,8 +275,8 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           </div>
           <div className="text-center mt-2 min-h-[60px]">
             <h3 className="text-white text-lg font-bold orbitron">RADIO GO</h3>
-            {status === 'loading' ? (
-              <p className="text-yellow-400 text-sm animate-pulse">{error || 'Cargando señal...'}</p>
+            {isReconnecting ? (
+              <p className="text-yellow-400 text-sm animate-pulse">{error}</p>
             ) : currentLive ? (
               <>
                 <p className="text-custom-orange text-base font-bold animate-pulse">EN VIVO: {currentLive.title}</p>
@@ -294,9 +301,10 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       <div className="flex justify-center items-center gap-6 mb-6">
         <motion.button
           onClick={togglePlay}
-          className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 rounded-full flex items-center justify-center text-white shadow-lg transition-all pulse-glow"
+          className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 rounded-full flex items-center justify-center text-white shadow-lg transition-all pulse-glow disabled:opacity-50 disabled:cursor-not-allowed"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
+          disabled={isReconnecting}
         >
           {playing ? (
             <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
