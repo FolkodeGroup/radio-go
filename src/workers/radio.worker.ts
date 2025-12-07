@@ -1,7 +1,8 @@
-// Web Worker para mantener el 'latido' de la aplicación
-// Intervalo ajustado a 60 segundos por solicitud del usuario par minimizar recursos.
+// Web Worker para "Latido" y Sincronización del Relevo
+// Intervalo: 10 segundos.
+// Necesario para disparar el evento de "relevo" (switch) a los 290s (4:50) con precisión aceptable.
 
-const interval = 60000; // 60 segundos
+const interval = 10000; // 10 segundos
 
 setInterval(() => {
   self.postMessage({ type: 'tick' });
