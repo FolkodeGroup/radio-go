@@ -17,24 +17,95 @@ type PlayerProps = {
 };
 
 const Player: React.FC<PlayerProps> = ({ currentLive }) => {
-  const audioRef = useRef<HTMLAudioElement>(null);
+  // --- DUAL ENGINE: Motores A y B ---
+  const engineARef = useRef<HTMLAudioElement>(null);
+  const engineBRef = useRef<HTMLAudioElement>(null);
+
   const workerRef = useRef<Worker | null>(null);
 
-  const reconnectTimer = useRef<number | null>(null);
-  const reconnectAttempts = useRef(0);
+  // Estado para controlar qué motor es el que "suena" (el activo)
+  const [activeEngine, setActiveEngine] = useState<'A' | 'B'>('A');
 
-  // Guardamos el último tiempo conocido para detectar stalls
-  const lastTimeRef = useRef<number>(0);
-  const stallCountRef = useRef<number>(0);
+  // Temporizador para el relevo
+  const timeSinceLastSwitch = useRef(0);
+  const isSwitchingRef = useRef(false);
 
   const [playing, setPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.1);
+  const [volume, setVolume] = useState(1.0);
   const [currentTime, setCurrentTime] = useState("00:00");
   const [error, setError] = useState<string | null>(null);
   const [song, setSong] = useState<{ title: string; artist: string; cover: string | null }>({ title: 'Cargando...', artist: '', cover: null });
-  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'stalled' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
 
-  // Inicializar Worker
+  // Helpers
+  const getActiveAudio = () => (activeEngine === 'A' ? engineARef.current : engineBRef.current);
+  const getNextAudio = () => (activeEngine === 'A' ? engineBRef.current : engineARef.current);
+
+  // --- FINALIZAR PROCESO DE CAMBIO (DEFINIDO ANTES PARA USAR EN CALLBACK) ---
+  const finalizeSwitch = () => {
+    const currentAudio = getActiveAudio(); // El "viejo" (A)
+
+    console.log("✂️ [Relay] Cortando motor viejo ahora.");
+
+    // CAMBIO DE ESTADO (SWAP)
+    setActiveEngine(prev => prev === 'A' ? 'B' : 'A');
+    timeSinceLastSwitch.current = 0;
+    isSwitchingRef.current = false;
+
+    // Matar el viejo
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.src = ""; // Liberar conexión
+      currentAudio.volume = 0;
+    }
+
+    console.log("✨ [Relay] Relevo Completado. Conexión 100% Renovada.");
+  };
+
+  // --- HANDOFF LOGIC (Relevo con Overlap) ---
+  const performHandoff = useCallback(() => {
+    if (isSwitchingRef.current) return;
+    isSwitchingRef.current = true;
+
+    const nextAudio = getNextAudio();
+    // Quitamos 'activeAudio' que no se usaba aquí, para evitar warning
+
+    if (!nextAudio) return;
+
+    console.log(`🔄 [Relay] Calentando Motor ${activeEngine === 'A' ? 'B' : 'A'}...`);
+
+    // 1. Preparar siguiente motor (Muted)
+    nextAudio.volume = 0;
+    nextAudio.src = STREAM_URL + '?t=' + Date.now();
+    nextAudio.load();
+
+    // Listener para cuando haya audio real
+    const onPlayStart = () => {
+      console.log("🔊 [Relay] Motor secundario emitiendo sonido. Iniciando Cross-Fade...");
+
+      // 3. Unmute inmediato del nuevo
+      nextAudio.volume = volume;
+
+      // 4. MANTENER AMBOS SONANDO (OVERLAP) POR 2 SEGUNDOS
+      setTimeout(() => {
+        finalizeSwitch();
+      }, 2000);
+
+      nextAudio.removeEventListener('playing', onPlayStart);
+    };
+
+    nextAudio.addEventListener('playing', onPlayStart, { once: true });
+
+    // 2. Play
+    nextAudio.play()
+      .catch(err => {
+        console.error("❌ [Relay] Falló arranque motor secundario:", err);
+        isSwitchingRef.current = false;
+        nextAudio.removeEventListener('playing', onPlayStart);
+      });
+  }, [activeEngine, volume]); // finalizeSwitch es estable o recreada, pero dentro del scope funciona
+
+  // --- WORKER ---
   useEffect(() => {
     workerRef.current = new RadioWorker();
 
@@ -43,114 +114,75 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
         const now = new Date();
         setCurrentTime(now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
 
-        // Ejecutar lógica de stall detection aquí
-        checkStall();
+        if (playing && status === 'playing') {
+          timeSinceLastSwitch.current += 10;
+        }
+
+        // Trigger a los 290s
+        if (playing && !isSwitchingRef.current && timeSinceLastSwitch.current >= 290) {
+          console.log("⚠️ [Relay] 4m 50s alcanzados. Iniciando relevo preventivo...");
+          performHandoff();
+        }
       }
     };
 
-    return () => {
-      workerRef.current?.terminate();
-    };
-  }, []); // Dependencias vacías, el checkStall usará refs
+    return () => workerRef.current?.terminate();
+  }, [playing, status, performHandoff]);
 
-  // Función para chequear stalls (ejecutada por el Worker cada 60s)
-  const checkStall = useCallback(() => {
-    if (!audioRef.current || audioRef.current.paused) {
-      stallCountRef.current = 0;
-      return;
-    }
 
-    const audio = audioRef.current;
-    const currentPos = audio.currentTime;
+  // --- CONTROLES PÚBLICOS ---
 
-    // Si el tiempo no ha avanzado nada desde el último tick...
-    if (Math.abs(currentPos - lastTimeRef.current) < 0.1) {
-      stallCountRef.current++;
-      console.warn(`[Worker Watchdog] Stall detectado ${stallCountRef.current}`);
+  const initialPlay = async () => {
+    const audio = getActiveAudio();
+    if (!audio) return;
 
-      // Si 1 tick (60s) estamos igual -> RECONECTAR
-      // Dado que el intervalo es largo, con 1 fallo ya es grave.
-      if (stallCountRef.current >= 1) {
-        console.error("[Worker Watchdog] Stream congelado. Forzando reconexión...");
-        stallCountRef.current = 0;
-        attemptReconnect();
-      }
-    } else {
-      // Si avanza, reseteamos
-      stallCountRef.current = 0;
+    setStatus('loading');
+    setError("Conectando...");
 
-      // Recuperación visual automática si estaba en error
-      setStatus(prev => (prev !== 'playing' ? 'playing' : prev));
-      setError(null);
-    }
-
-    lastTimeRef.current = currentPos;
-  }, []);
-
-  const playStream = async () => {
-    if (!audioRef.current) return false;
     try {
-      audioRef.current.src = STREAM_URL + '?t=' + Date.now();
-      audioRef.current.load();
-      await audioRef.current.play();
+      audio.src = STREAM_URL + '?t=' + Date.now();
+      audio.volume = volume;
+      await audio.play();
       setPlaying(true);
       setStatus('playing');
       setError(null);
-      reconnectAttempts.current = 0;
-      return true;
+      timeSinceLastSwitch.current = 0;
     } catch (err) {
-      console.error("Error playing:", err);
+      console.error("Error start:", err);
       setStatus('error');
-      return false;
+      setError("Error de conexión");
     }
   };
 
-  const attemptReconnect = () => {
-    setStatus('loading');
-    setError("Reconectando señal...");
+  const manualStop = () => {
+    const current = getActiveAudio();
+    const next = getNextAudio();
 
-    if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+    if (current) { current.pause(); current.src = ""; }
+    if (next) { next.pause(); next.src = ""; }
 
-    reconnectTimer.current = window.setTimeout(async () => {
-      await playStream();
-    }, 1000);
+    setPlaying(false);
+    setStatus('idle');
+    timeSinceLastSwitch.current = 0;
+    isSwitchingRef.current = false;
   };
 
-  const togglePlay = async () => {
-    if (playing) {
-      audioRef.current?.pause();
-      if (audioRef.current) audioRef.current.src = "";
-      setPlaying(false);
-      setStatus('idle');
-    } else {
-      setStatus('loading');
-      await playStream();
-    }
+  const togglePlay = () => {
+    if (playing) manualStop();
+    else initialPlay();
   };
-
-  // Listeners nativos (mantenemos para feedback rápido)
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const onEnded = () => attemptReconnect();
-    const onError = () => attemptReconnect();
-
-    audio.addEventListener('ended', onEnded);
-    audio.addEventListener('error', onError);
-
-    return () => {
-      audio.removeEventListener('ended', onEnded);
-      audio.removeEventListener('error', onError);
-    };
-  }, []);
 
   const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = Number(e.target.value);
     setVolume(newVolume);
-    if (audioRef.current) audioRef.current.volume = newVolume;
+    // Aplicar a ambos si hay transición
+    const current = getActiveAudio();
+    const next = getNextAudio();
+    if (current) current.volume = newVolume;
+    if (next && isSwitchingRef.current) next.volume = newVolume;
   };
 
+  // --- Metadata ---
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
@@ -170,8 +202,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     return () => clearInterval(interval);
   }, []);
 
-
-  const isReconnecting = status === 'loading' || status === 'stalled';
+  const isReconnecting = status === 'loading';
 
   return (
     <motion.div
@@ -180,7 +211,9 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 1 }}
     >
-      <audio ref={audioRef} preload="none" crossOrigin="anonymous" />
+      {/* MOTORES OCULTOS */}
+      <audio ref={engineARef} preload="none" crossOrigin="anonymous" className="hidden" />
+      <audio ref={engineBRef} preload="none" crossOrigin="anonymous" className="hidden" />
 
       <div className="bg-black rounded-xl p-6 mb-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 to-blue-900/20"></div>
@@ -204,7 +237,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           <div className="text-center mt-2 min-h-[60px]">
             <h3 className="text-white text-lg font-bold orbitron">RADIO GO</h3>
             {isReconnecting ? (
-              <p className="text-yellow-400 text-sm animate-pulse">{error || 'Reconectando...'}</p>
+              <p className="text-yellow-400 text-sm animate-pulse">{error || 'Conectando...'}</p>
             ) : currentLive ? (
               <>
                 <p className="text-custom-orange text-base font-bold animate-pulse">EN VIVO: {currentLive.title}</p>
