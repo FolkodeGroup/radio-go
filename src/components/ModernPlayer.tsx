@@ -191,7 +191,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const isReconnecting = status === 'loading'; // Simplificado para esta versión
+  const isReconnecting = status === 'loading';
 
   return (
     <motion.div
