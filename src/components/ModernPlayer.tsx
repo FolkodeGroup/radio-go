@@ -104,7 +104,7 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     }, 2000 + (reconnectAttempts.current * 1000));
   }, [status, clearAllTimers, playStream]);
 
-  // Detector de stalls mejorado
+  // Detector de stalls mejorado (Script de monitoreo)
   const startStallDetector = useCallback(() => {
     if (!audioRef.current) return;
 
@@ -112,25 +112,40 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     let lastTime = audio.currentTime;
     let stallCount = 0;
 
+    // Limpiar intervalo previo si existe
+    if (stallDetector.current) clearInterval(stallDetector.current);
+
     stallDetector.current = window.setInterval(() => {
-      if (audio.paused || !playing || status !== 'playing') return;
+      // Si el usuario pausó o no estamos en modo reproducción, no hacemos nada
+      if (audio.paused || !playing || status !== 'playing') {
+        stallCount = 0;
+        return;
+      }
 
       const currentPosition = audio.currentTime;
       const readyState = audio.readyState;
+      const networkState = audio.networkState;
 
-      // Detectar si el audio no avanza y no está buffering adecuadamente
-      if (currentPosition === lastTime && readyState < 3) {
+      // Condición de stall: El tiempo no avanza
+      // Eliminamos la dependencia estricta de readyState < 3 porque a veces el browser miente
+      if (Math.abs(currentPosition - lastTime) < 0.1) {
         stallCount++;
-        console.warn(`Stall detectado ${stallCount}/3 - ReadyState: ${readyState}`);
+        console.warn(`[StallDetector] Stall detectado ${stallCount}/5. Time: ${currentPosition.toFixed(2)}s | ReadyState: ${readyState} | NetworkState: ${networkState}`);
 
-        if (stallCount >= 3) {
-          console.warn("Stream bloqueado. Forzando reconexión.");
+        // Si llevamos 10 segundos (5 checks * 2000ms) sin avanzar, reconectamos
+        if (stallCount >= 5) {
+          console.warn("[StallDetector] Stream bloqueado por 10s. Forzando reconexión automática...");
           setStatus('stalled');
           attemptReconnect();
+          stallCount = 0; // Reset para evitar bucles inmediatos si la reconexión toma tiempo
           return;
         }
       } else {
-        stallCount = 0; // Reset si funciona correctamente
+        // Si el tiempo avanza, reseteamos el contador
+        if (stallCount > 0) {
+          console.log("[StallDetector] Recuperado. El stream fluye de nuevo.");
+        }
+        stallCount = 0;
       }
 
       lastTime = currentPosition;
