@@ -161,9 +161,14 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
 
     if (reconnectAttempts.current < maxReconnectAttempts) {
       reconnectAttempts.current += 1;
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000); // Backoff exponencial hasta 30s
 
-      console.log(`🔄 Intensando reconectar en ${delay}ms (Intento ${reconnectAttempts.current}/${maxReconnectAttempts})`);
+      // Intento 1: Casi inmediato (50ms) para que el usuario no note el corte.
+      // Intentos siguientes: Backoff exponencial (1s, 2s, 4s...)
+      const delay = reconnectAttempts.current === 1
+        ? 50
+        : Math.min(1000 * Math.pow(2, reconnectAttempts.current - 1), 30000);
+
+      console.log(`🔄 Reintentando en ${delay}ms (Intento ${reconnectAttempts.current}/${maxReconnectAttempts})`);
       setStatus('reconnecting');
       setError(`Reconectando... (${reconnectAttempts.current})`);
 
