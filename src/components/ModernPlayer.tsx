@@ -61,7 +61,10 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
           updateMediaSession(newSong);
         }
 
-      } catch { } // Silencioso para no saturar logs
+      } catch (err) {
+        // Solo loguear si hay internet, para evitar spam cuando se corta la conexión
+        if (navigator.onLine) console.warn("Error fetching metadata");
+      }
     };
 
     fetchMetadata();
@@ -162,10 +165,10 @@ const Player: React.FC<PlayerProps> = ({ currentLive }) => {
     if (reconnectAttempts.current < maxReconnectAttempts) {
       reconnectAttempts.current += 1;
 
-      // Intento 1: Casi inmediato (50ms) para que el usuario no note el corte.
+      // Intento 1: Casi inmediato (10ms) para que el usuario no note el corte.
       // Intentos siguientes: Backoff exponencial (1s, 2s, 4s...)
       const delay = reconnectAttempts.current === 1
-        ? 50
+        ? 10
         : Math.min(1000 * Math.pow(2, reconnectAttempts.current - 1), 30000);
 
       console.log(`🔄 Reintentando en ${delay}ms (Intento ${reconnectAttempts.current}/${maxReconnectAttempts})`);
