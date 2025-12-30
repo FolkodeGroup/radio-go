@@ -19,13 +19,6 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api/stream': {
-        target: 'https://server.streamcasthd.com/8056/stream',
-        changeOrigin: true,
-        rewrite: () => '',
-        secure: false, // Set to false to avoid SSL issues if certificate chain is incomplete, though URL is https
-        followRedirects: true
-      },
       '/api/metadata': {
         target: 'https://server.streamcasthd.com/cp/get_info.php?p=8056',
         changeOrigin: true,

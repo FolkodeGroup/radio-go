@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 
-const STREAM_URL = import.meta.env.VITE_STREAM_URL || "";
+const STREAM_URL = "https://server.streamcasthd.com/8056/stream";
 
 const bars = Array.from({ length: 12 });
 
